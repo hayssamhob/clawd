@@ -80,7 +80,75 @@ class PolymarketClient:
         if elapsed < self.min_request_interval:
             time.sleep(self.min_request_interval - elapsed)
         self.last_request_time = time.time()
-    
+
+    def get_balance(self) -> Dict[str, float]:
+        """
+        Get USDC balance on Polygon
+
+        Returns:
+            Dict with 'balance' (total USDC) and 'available' (not in open orders)
+        """
+        if self.simulation_mode:
+            # Return simulated balance
+            return {
+                'balance': 100.0,
+                'available': 100.0,
+                'currency': 'USDC'
+            }
+
+        try:
+            self._rate_limit()
+
+            # Get balance from Polymarket API
+            # The ClobClient has a method to get balance
+            balance_response = self.client.get_balance_allowance()
+
+            # Parse response - typically returns balance in smallest unit (6 decimals for USDC)
+            if isinstance(balance_response, dict):
+                balance_raw = float(balance_response.get('balance', 0))
+                # Convert from smallest unit (USDC has 6 decimals)
+                balance = balance_raw / 1_000_000
+
+                # Get open orders to calculate available balance
+                open_orders = self.client.get_orders()
+                locked_amount = 0.0
+
+                if isinstance(open_orders, list):
+                    for order in open_orders:
+                        if order.get('status') == 'OPEN':
+                            # Calculate locked funds in this order
+                            size = float(order.get('size', 0))
+                            price = float(order.get('price', 0))
+                            locked_amount += size * price
+
+                available = max(0, balance - locked_amount)
+
+                return {
+                    'balance': round(balance, 2),
+                    'available': round(available, 2),
+                    'currency': 'USDC',
+                    'locked': round(locked_amount, 2)
+                }
+            else:
+                self.logger.error(f"Unexpected balance response: {balance_response}")
+                return {
+                    'balance': 0.0,
+                    'available': 0.0,
+                    'currency': 'USDC',
+                    'locked': 0.0
+                }
+
+        except Exception as e:
+            self.logger.error(f"Error fetching balance: {e}")
+            import traceback
+            self.logger.error(traceback.format_exc())
+            return {
+                'balance': 0.0,
+                'available': 0.0,
+                'currency': 'USDC',
+                'error': str(e)
+            }
+
     async def get_markets(self, category: Optional[str] = None) -> List[Dict]:
         """
         Get all active markets

@@ -178,16 +178,27 @@ class ArbitrageBot:
         self.running = True
         self.logger.info("🚀 Starting Polymarket Arbitrage Bot")
         
+        # Check balance before starting
+        balance_info = self.polymarket.get_balance()
+        self.logger.info(f"💰 Current Balance: ${balance_info.get('balance', 0):.2f} USDC")
+        self.logger.info(f"   Available: ${balance_info.get('available', 0):.2f} USDC")
+
+        if balance_info.get('available', 0) < self.config['polymarket']['max_position_size']:
+            self.logger.warning(f"⚠️  Low balance: ${balance_info.get('available', 0):.2f} USDC")
+            self.logger.warning(f"   Recommended minimum: ${self.config['polymarket']['max_position_size']:.2f} USDC")
+
         # Send startup notification
         await self.notifier.send_message(
             "🤖 YES/NO Arbitrage Bot Started",
             f"Mode: {self.config['execution']['mode']}\n"
+            f"Balance: ${balance_info.get('balance', 0):.2f} USDC\n"
+            f"Available: ${balance_info.get('available', 0):.2f} USDC\n"
             f"Capital: ${self.total_capital}\n"
             f"Min Net Margin: {self.config['polymarket']['min_net_margin']*100:.1f}%\n"
             f"Max Position: ${self.config['polymarket']['max_position_size']}\n"
             f"Target Markets: BTC, ETH, SOL 15-min"
         )
-        
+
         # Main event loop
         scan_interval = self.config['scanner']['scan_interval']
         

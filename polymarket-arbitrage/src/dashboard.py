@@ -805,6 +805,80 @@ def api_analytics():
         return jsonify({'error': str(e)}), 500
 
 
+# Bot Control Endpoints
+@app.route('/api/control/start', methods=['POST'])
+def api_control_start():
+    """Start the bot"""
+    try:
+        # In a production system, this would send a signal to the bot process
+        # For now, return success (bot must be started manually via script)
+        return jsonify({'success': False, 'error': 'Please use ./start_all.sh to start the bot'})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/control/stop', methods=['POST'])
+def api_control_stop():
+    """Stop the bot"""
+    try:
+        import subprocess
+        result = subprocess.run(['pkill', '-f', 'arbitrage_bot.py'], capture_output=True)
+        return jsonify({'success': True, 'message': 'Bot stopped'})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/control/pause', methods=['POST'])
+def api_control_pause():
+    """Pause/Resume the bot"""
+    try:
+        # This would need to be implemented in the bot with a pause mechanism
+        return jsonify({'success': False, 'error': 'Pause functionality not yet implemented'})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+# Settings Endpoints
+@app.route('/api/settings', methods=['GET'])
+def api_get_settings():
+    """Get current settings"""
+    try:
+        import yaml
+        with open('../config/config.yaml') as f:
+            config = yaml.safe_load(f)
+        return jsonify(config)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/settings', methods=['POST'])
+def api_save_settings():
+    """Save settings"""
+    try:
+        import yaml
+        settings = request.get_json()
+
+        # Load current config
+        with open('../config/config.yaml') as f:
+            config = yaml.safe_load(f)
+
+        # Update specific fields
+        if 'execution' in settings:
+            config['execution'].update(settings['execution'])
+        if 'polymarket' in settings:
+            config['polymarket'].update(settings['polymarket'])
+        if 'scanner' in settings:
+            config['scanner'].update(settings['scanner'])
+
+        # Save back to file
+        with open('../config/config.yaml', 'w') as f:
+            yaml.dump(config, f, default_flow_style=False)
+
+        return jsonify({'success': True, 'message': 'Settings saved'})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
 if __name__ == '__main__':
     print("""
     ╔═══════════════════════════════════════╗
