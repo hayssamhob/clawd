@@ -4,24 +4,26 @@ Polymarket Arbitrage Bot
 Automated trading bot for Polymarket prediction markets
 """
 
+import logging
 import os
+import signal
 import sys
 import time
-import logging
-import signal
-from typing import Dict, List, Optional
 from datetime import datetime, timedelta
 from pathlib import Path
+from typing import Dict, List, Optional
 
 import yaml
 from dotenv import load_dotenv
 
+from atomic_executor import AtomicExecutor, ExecutionStatus
+from database import Database
+from notification_service import NotificationService
+from opportunity_scanner import OpportunityScanner
 # Local imports
 from polymarket_client import PolymarketClient
-from opportunity_scanner import OpportunityScanner
 from risk_manager import RiskManager
-from notification_service import NotificationService
-from database import Database
+from yes_no_arbitrage_scanner import YesNoArbitrageScanner
 
 # Load environment variables
 load_dotenv()
@@ -40,10 +42,19 @@ class ArbitrageBot:
         
         # Initialize components
         self.client = self._init_polymarket_client()
-        self.scanner = OpportunityScanner(self.client, self.config)
+        
+        # Use specialized YES/NO arbitrage scanner
+        self.scanner = YesNoArbitrageScanner(self.client, self.config)
+        self.executor = AtomicExecutor(self.client, self.config)
+        
         self.risk_manager = RiskManager(self.config)
         self.notifier = NotificationService(self.config)
         self.database = Database(self.config['database']['path'])
+        
+        # Capital tracking
+        capital_config = self.config.get('capital', {})
+        self.total_capital = capital_config.get('total_capital', 100)
+        self.deployed_capital = 0.0
         
         # Bot state
         self.running = False
@@ -169,10 +180,12 @@ class ArbitrageBot:
         
         # Send startup notification
         await self.notifier.send_message(
-            "🤖 Arbitrage Bot Started",
+            "🤖 YES/NO Arbitrage Bot Started",
             f"Mode: {self.config['execution']['mode']}\n"
-            f"Min Profit: {self.config['polymarket']['min_profit_threshold']*100:.2f}%\n"
-            f"Max Position: ${self.config['polymarket']['max_position_size']}"
+            f"Capital: ${self.total_capital}\n"
+            f"Min Net Margin: {self.config['polymarket']['min_net_margin']*100:.1f}%\n"
+            f"Max Position: ${self.config['polymarket']['max_position_size']}\n"
+            f"Target Markets: BTC, ETH, SOL 15-min"
         )
         
         # Main event loop
@@ -200,7 +213,7 @@ class ArbitrageBot:
         self.logger.info("Bot stopped")
     
     async def _scan_and_execute(self):
-        """Scan for opportunities and execute trades"""
+        """Scan for YES/NO arbitrage opportunities and execute"""
         self.last_scan_time = datetime.now()
         
         # Check risk limits
@@ -223,16 +236,16 @@ class ArbitrageBot:
                 "Risk limits reset. Trading resumed."
             )
         
-        # Scan for opportunities
+        # Scan for YES/NO arbitrage opportunities only
         opportunities = await self.scanner.scan_markets()
         
         if not opportunities:
-            self.logger.debug("No arbitrage opportunities found")
+            self.logger.debug("No YES/NO arbitrage opportunities found")
             return
         
-        self.logger.info(f"Found {len(opportunities)} potential opportunities")
+        self.logger.info(f"🎯 Found {len(opportunities)} arbitrage opportunities")
         
-        # Evaluate and execute opportunities
+        # Execute best opportunity
         for opp in opportunities:
             if not self.running or self.paused:
                 break
@@ -243,20 +256,32 @@ class ArbitrageBot:
             
             # Check risk limits
             if not self.risk_manager.approve_trade(opp):
-                self.logger.info(f"Trade rejected by risk manager: {opp['market_name']}")
+                self.logger.info(f"Trade rejected by risk manager: {opp['market_name'][:40]}...")
                 continue
             
-            # Execute the trade
-            success = await self._execute_arbitrage(opp)
+            # Calculate position size
+            from decimal import Decimal
+            position_size = self.scanner.calculate_position_size(opp)
+            
+            if position_size < Decimal('1'):  # Minimum $1 position
+                self.logger.debug("Position size too small, skipping")
+                continue
+            
+            # Execute YES/NO arbitrage
+            success = await self._execute_yes_no_arbitrage(opp, position_size)
             
             if success:
                 self.trade_count += 1
                 await self.notifier.send_message(
-                    "💰 Trade Executed",
-                    f"Market: {opp['market_name']}\n"
-                    f"Expected Profit: ${opp['expected_profit']:.2f}\n"
+                    "💰 YES/NO Arbitrage Executed",
+                    f"Market: {opp['market_name'][:50]}...\n"
+                    f"Combined Price: ${opp['combined_price']:.4f}\n"
+                    f"Net Margin: {opp['net_margin']*100:.2f}%\n"
+                    f"Position: ${float(position_size):.2f}\n"
                     f"Total Trades: {self.trade_count}"
                 )
+                # Only execute one opportunity per scan cycle
+                break
     
     async def _validate_opportunity(self, opportunity: Dict) -> bool:
         """Validate an arbitrage opportunity"""
@@ -272,7 +297,7 @@ class ArbitrageBot:
             fresh_profit = self.scanner.calculate_profit(fresh_data, opportunity)
             
             # Check if still profitable
-            min_threshold = self.config['polymarket']['min_profit_threshold']
+            min_threshold = self.config['polymarket'].get('min_net_margin', 0.015)
             if fresh_profit < min_threshold:
                 self.logger.debug(f"Opportunity no longer profitable: {opportunity['market_name']}")
                 return False
@@ -285,6 +310,58 @@ class ArbitrageBot:
             
         except Exception as e:
             self.logger.error(f"Error validating opportunity: {e}")
+            return False
+    
+    async def _execute_yes_no_arbitrage(self, opportunity: Dict, position_size) -> bool:
+        """Execute YES/NO arbitrage using atomic executor"""
+        try:
+            market_name = opportunity.get('market_name', 'Unknown')[:50]
+            self.logger.info(f"⚡ Executing YES/NO arbitrage: {market_name}...")
+            self.logger.info(f"   YES: ${opportunity['yes_price']:.4f} + NO: ${opportunity['no_price']:.4f} = ${opportunity['combined_price']:.4f}")
+            self.logger.info(f"   Net margin: {opportunity['net_margin']*100:.2f}%")
+            self.logger.info(f"   Position size: ${float(position_size):.2f}")
+            
+            # Check execution mode
+            mode = self.config['execution']['mode']
+            
+            if mode == 'dry_run':
+                self.logger.info(f"[DRY RUN] Would execute YES/NO arbitrage")
+                self.logger.info(f"[DRY RUN] Expected profit: ${opportunity['net_margin'] * float(position_size):.4f}")
+                self._record_trade(opportunity, simulated=True)
+                return True
+            
+            # Execute using atomic executor
+            result = await self.executor.execute_arbitrage(opportunity, position_size)
+            
+            if result.success:
+                self.logger.info(f"✅ YES/NO arbitrage executed successfully!")
+                self.logger.info(f"   Locked profit: ${float(result.locked_profit):.4f}")
+                
+                # Record trade
+                self._record_trade(opportunity, result=result.to_dict())
+                
+                # Update risk manager
+                self.risk_manager.record_trade(result.to_dict())
+                
+                # Update total profit
+                self.total_profit += float(result.locked_profit)
+                
+                return True
+            else:
+                self.logger.error(f"❌ YES/NO arbitrage failed: {result.reason}")
+                await self.notifier.send_alert(
+                    "❌ Arbitrage Failed",
+                    f"Market: {market_name}\n"
+                    f"Reason: {result.reason}"
+                )
+                return False
+                
+        except Exception as e:
+            self.logger.error(f"Error executing YES/NO arbitrage: {e}", exc_info=True)
+            await self.notifier.send_alert(
+                "❌ Execution Error",
+                f"Error: {str(e)}"
+            )
             return False
     
     async def _execute_arbitrage(self, opportunity: Dict) -> bool:
@@ -335,6 +412,41 @@ class ArbitrageBot:
             )
             return False
     
+    async def _execute_market_making(self, opportunity: Dict) -> bool:
+        """Execute a market making strategy"""
+        try:
+            self.logger.info(f"Executing market making on {opportunity['market_name'][:50]}...")
+            
+            # Check execution mode
+            mode = self.config['execution']['mode']
+            
+            if mode == 'dry_run':
+                self.logger.info(f"[DRY RUN] Would place market making orders: {opportunity}")
+                # Simulate success
+                self._record_trade(opportunity, simulated=True)
+                return True
+            
+            # Execute market making orders
+            result = await self.market_maker.execute_market_making(opportunity)
+            
+            if result['success']:
+                self.logger.info(f"✅ Market making orders placed")
+                
+                # Record trade
+                self._record_trade(opportunity, result=result)
+                
+                # Update risk manager
+                self.risk_manager.record_trade(result)
+                
+                return True
+            else:
+                self.logger.error(f"❌ Market making failed: {result.get('error')}")
+                return False
+                
+        except Exception as e:
+            self.logger.error(f"Error executing market making: {e}", exc_info=True)
+            return False
+    
     def _record_trade(self, opportunity: Dict, simulated: bool = False, result: Optional[Dict] = None):
         """Record trade in database"""
         trade_data = {
@@ -381,7 +493,7 @@ class ArbitrageBot:
 def main():
     """Main entry point"""
     import asyncio
-    
+
     # ASCII art banner
     print("""
     ╔═══════════════════════════════════════╗

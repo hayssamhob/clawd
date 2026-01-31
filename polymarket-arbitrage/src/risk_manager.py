@@ -4,9 +4,9 @@ Manages trading risks and position limits
 """
 
 import logging
-from typing import Dict, List
-from datetime import datetime, timedelta
 from collections import deque
+from datetime import datetime, timedelta
+from typing import Dict, List
 
 
 class RiskManager:
@@ -23,16 +23,17 @@ class RiskManager:
         self.logger = logging.getLogger(__name__)
         
         # Risk limits
-        self.max_daily_loss = self.config['max_daily_loss']
-        self.max_weekly_loss = self.config['max_weekly_loss']
-        self.max_open_positions = self.config['max_open_positions']
-        self.consecutive_loss_limit = self.config['consecutive_loss_limit']
+        self.max_daily_loss = self.config.get('max_daily_loss', 10)
+        self.max_weekly_loss = self.config.get('max_weekly_loss', 20)
+        self.max_open_positions = self.config.get('max_open_positions', 4)
+        self.consecutive_failure_limit = self.config.get('consecutive_failure_limit', 3)
+        self.capital_drawdown_halt = self.config.get('capital_drawdown_halt', 0.10)
         
         # Tracking
         self.daily_pnl = 0.0
         self.weekly_pnl = 0.0
         self.open_positions = 0
-        self.consecutive_losses = 0
+        self.consecutive_failures = 0  # Execution failures, not losses
         self.circuit_breaker_active = False
         self.circuit_breaker_until = None
         
@@ -69,8 +70,8 @@ class RiskManager:
             self.logger.debug(f"Max open positions reached: {self.open_positions}")
             return False
         
-        # Check consecutive losses
-        if self.consecutive_losses >= self.consecutive_loss_limit:
+        # Check consecutive execution failures
+        if self.consecutive_failures >= self.consecutive_failure_limit:
             self._activate_circuit_breaker()
             return False
         
@@ -132,11 +133,11 @@ class RiskManager:
         self.daily_pnl += profit
         self.weekly_pnl += profit
         
-        # Update consecutive losses
-        if profit < 0:
-            self.consecutive_losses += 1
+        # Track execution failures (not losses - YES/NO arbitrage should never lose)
+        if not trade_result.get('success', False):
+            self.consecutive_failures += 1
         else:
-            self.consecutive_losses = 0
+            self.consecutive_failures = 0
         
         # Update open positions (simplified - assumes immediate close)
         # In reality, would track until position is closed
@@ -144,7 +145,7 @@ class RiskManager:
         self.logger.info(f"Trade recorded: Profit=${profit:.2f}, Daily P&L=${self.daily_pnl:.2f}")
         
         # Check if need to activate circuit breaker
-        if self.consecutive_losses >= self.consecutive_loss_limit:
+        if self.consecutive_failures >= self.consecutive_failure_limit:
             self._activate_circuit_breaker()
     
     def _activate_circuit_breaker(self):
@@ -162,14 +163,14 @@ class RiskManager:
         """Reset circuit breaker"""
         self.circuit_breaker_active = False
         self.circuit_breaker_until = None
-        self.consecutive_losses = 0
+        self.consecutive_failures = 0
         
         self.logger.info("✅ Circuit breaker reset. Trading resumed.")
     
     def reset_daily_limits(self):
         """Reset daily limits (call at start of each day)"""
         self.daily_pnl = 0.0
-        self.consecutive_losses = 0
+        self.consecutive_failures = 0
         self.logger.info("Daily limits reset")
     
     def reset_weekly_limits(self):
