@@ -120,8 +120,9 @@ logging:
 
 execution:
   # Execution settings
-  mode: "dry_run" # START IN DRY RUN - test first!
-
+  mode: "live" # Options: "dry_run", "live"
+  max_slippage: 0.01
+  order_timeout: 10
   # Atomic execution for YES/NO arbitrage
   atomic_execution: true # Both orders must succeed or abort
   order_type: "limit" # POST-ONLY limit orders

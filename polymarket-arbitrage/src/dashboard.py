@@ -4,16 +4,16 @@ Web Dashboard for Polymarket Arbitrage Bot
 Real-time monitoring interface
 """
 
+import json
 import os
-import sys
 import sqlite3
+import sys
 from datetime import datetime, timedelta
 from pathlib import Path
 
-from flask import Flask, render_template, jsonify
 import plotly
 import plotly.graph_objs as go
-import json
+from flask import Flask, jsonify, render_template
 
 # Add parent directory to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -282,8 +282,250 @@ def api_opportunities():
         return jsonify({'error': str(e)}), 500
 
 
+import signal
+# Bot process management
+import subprocess
+
 # Import request for query parameters
 from flask import request
+
+BOT_PROCESS = None
+BOT_STATUS = 'stopped'  # 'running', 'paused', 'stopped'
+BOT_SCRIPT = 'src/arbitrage_bot.py'
+
+
+@app.route('/api/bot/start', methods=['POST'])
+def api_bot_start():
+    """Start the arbitrage bot"""
+    global BOT_PROCESS, BOT_STATUS
+    
+    try:
+        # Check if already running
+        result = subprocess.run(
+            ['pgrep', '-f', 'arbitrage_bot.py'],
+            capture_output=True,
+            text=True
+        )
+        if result.stdout.strip():
+            return jsonify({
+                'success': False,
+                'error': 'Bot is already running',
+                'status': 'running'
+            })
+        
+        # Start the bot in background
+        BOT_PROCESS = subprocess.Popen(
+            ['python3', BOT_SCRIPT],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            start_new_session=True
+        )
+        BOT_STATUS = 'running'
+        
+        return jsonify({
+            'success': True,
+            'message': '✅ Bot started successfully!',
+            'status': 'running',
+            'pid': BOT_PROCESS.pid
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'status': BOT_STATUS
+        }), 500
+
+
+@app.route('/api/bot/stop', methods=['POST'])
+def api_bot_stop():
+    """Stop the arbitrage bot"""
+    global BOT_PROCESS, BOT_STATUS
+    
+    try:
+        # Find and kill the bot process
+        result = subprocess.run(
+            ['pkill', '-f', 'arbitrage_bot.py'],
+            capture_output=True,
+            text=True
+        )
+        
+        BOT_PROCESS = None
+        BOT_STATUS = 'stopped'
+        
+        return jsonify({
+            'success': True,
+            'message': '🛑 Bot stopped successfully!',
+            'status': 'stopped'
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'status': BOT_STATUS
+        }), 500
+
+
+@app.route('/api/bot/pause', methods=['POST'])
+def api_bot_pause():
+    """Pause the arbitrage bot (send SIGUSR1)"""
+    global BOT_STATUS
+    
+    try:
+        # Find bot PID and send pause signal
+        result = subprocess.run(
+            ['pgrep', '-f', 'arbitrage_bot.py'],
+            capture_output=True,
+            text=True
+        )
+        
+        pid = result.stdout.strip()
+        if not pid:
+            return jsonify({
+                'success': False,
+                'error': 'Bot is not running',
+                'status': 'stopped'
+            })
+        
+        # Send SIGUSR1 to pause (bot needs to handle this)
+        os.kill(int(pid.split()[0]), signal.SIGUSR1)
+        BOT_STATUS = 'paused'
+        
+        return jsonify({
+            'success': True,
+            'message': '⏸️ Bot paused successfully!',
+            'status': 'paused'
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'status': BOT_STATUS
+        }), 500
+
+
+@app.route('/api/bot/restart', methods=['POST'])
+def api_bot_restart():
+    """Restart the arbitrage bot"""
+    global BOT_PROCESS, BOT_STATUS
+    
+    try:
+        # Stop first
+        subprocess.run(
+            ['pkill', '-f', 'arbitrage_bot.py'],
+            capture_output=True,
+            text=True
+        )
+        
+        import time
+        time.sleep(1)  # Wait for process to terminate
+        
+        # Start again
+        BOT_PROCESS = subprocess.Popen(
+            ['python3', BOT_SCRIPT],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            start_new_session=True
+        )
+        BOT_STATUS = 'running'
+        
+        return jsonify({
+            'success': True,
+            'message': '🔄 Bot restarted successfully!',
+            'status': 'running',
+            'pid': BOT_PROCESS.pid
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'status': BOT_STATUS
+        }), 500
+
+
+@app.route('/api/bot/status', methods=['GET'])
+def api_bot_status():
+    """Get current bot status"""
+    global BOT_STATUS
+    
+    try:
+        result = subprocess.run(
+            ['pgrep', '-f', 'arbitrage_bot.py'],
+            capture_output=True,
+            text=True
+        )
+        
+        is_running = bool(result.stdout.strip())
+        
+        if is_running and BOT_STATUS == 'stopped':
+            BOT_STATUS = 'running'
+        elif not is_running:
+            BOT_STATUS = 'stopped'
+        
+        return jsonify({
+            'status': BOT_STATUS,
+            'running': is_running,
+            'pid': result.stdout.strip() if is_running else None
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'status': 'unknown',
+            'error': str(e)
+        }), 500
+
+
+@app.route('/api/trades/export', methods=['GET'])
+def api_export_trades():
+    """Export trades as CSV"""
+    try:
+        import csv
+        import io
+        
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        cursor.execute("""
+            SELECT 
+                id, timestamp, market_name, trade_type,
+                expected_profit, actual_profit, status, simulated
+            FROM trades
+            ORDER BY timestamp DESC
+        """)
+        
+        rows = cursor.fetchall()
+        conn.close()
+        
+        # Create CSV in memory
+        output = io.StringIO()
+        writer = csv.writer(output)
+        
+        # Header
+        writer.writerow(['ID', 'Timestamp', 'Market', 'Type', 
+                        'Expected Profit', 'Actual Profit', 'Status', 'Simulated'])
+        
+        # Data rows
+        for row in rows:
+            writer.writerow([
+                row['id'], row['timestamp'], row['market_name'],
+                row['trade_type'], row['expected_profit'],
+                row['actual_profit'], row['status'], row['simulated']
+            ])
+        
+        output.seek(0)
+        
+        from flask import Response
+        return Response(
+            output.getvalue(),
+            mimetype='text/csv',
+            headers={'Content-Disposition': 'attachment; filename=trades_export.csv'}
+        )
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 
 if __name__ == '__main__':
