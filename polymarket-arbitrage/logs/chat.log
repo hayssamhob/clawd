@@ -17,3 +17,27 @@
  * Running on http://127.0.0.1:8001
  * Running on http://192.168.100.247:8001
 [33mPress CTRL+C to quit[0m
+127.0.0.1 - - [31/Jan/2026 14:36:31] "OPTIONS /api/chat HTTP/1.1" 200 -
+127.0.0.1 - - [31/Jan/2026 14:36:31] "POST /api/chat HTTP/1.1" 200 -
+127.0.0.1 - - [31/Jan/2026 14:37:08] "OPTIONS /api/chat HTTP/1.1" 200 -
+127.0.0.1 - - [31/Jan/2026 14:37:08] "POST /api/chat HTTP/1.1" 200 -
+127.0.0.1 - - [31/Jan/2026 14:37:36] "OPTIONS /api/chat HTTP/1.1" 200 -
+127.0.0.1 - - [31/Jan/2026 14:37:36] "POST /api/chat HTTP/1.1" 200 -
+127.0.0.1 - - [31/Jan/2026 14:37:43] "OPTIONS /api/chat HTTP/1.1" 200 -
+127.0.0.1 - - [31/Jan/2026 14:37:43] "POST /api/chat HTTP/1.1" 200 -
+127.0.0.1 - - [31/Jan/2026 14:38:09] "OPTIONS /api/chat HTTP/1.1" 200 -
+127.0.0.1 - - [31/Jan/2026 14:38:09] "POST /api/chat HTTP/1.1" 200 -
+127.0.0.1 - - [31/Jan/2026 14:41:00] "OPTIONS /api/chat HTTP/1.1" 200 -
+127.0.0.1 - - [31/Jan/2026 14:41:00] "POST /api/chat HTTP/1.1" 200 -
+127.0.0.1 - - [31/Jan/2026 14:46:24] "OPTIONS /api/chat HTTP/1.1" 200 -
+127.0.0.1 - - [31/Jan/2026 14:46:24] "POST /api/chat HTTP/1.1" 200 -
+127.0.0.1 - - [31/Jan/2026 14:48:57] "OPTIONS /api/chat HTTP/1.1" 200 -
+127.0.0.1 - - [31/Jan/2026 14:48:57] "POST /api/chat HTTP/1.1" 200 -
+127.0.0.1 - - [31/Jan/2026 14:50:02] "OPTIONS /api/chat HTTP/1.1" 200 -
+127.0.0.1 - - [31/Jan/2026 14:50:02] "POST /api/chat HTTP/1.1" 200 -
+127.0.0.1 - - [31/Jan/2026 14:52:06] "OPTIONS /api/chat HTTP/1.1" 200 -
+127.0.0.1 - - [31/Jan/2026 14:52:06] "POST /api/chat HTTP/1.1" 200 -
+127.0.0.1 - - [31/Jan/2026 15:22:58] "OPTIONS /api/chat HTTP/1.1" 200 -
+127.0.0.1 - - [31/Jan/2026 15:22:58] "POST /api/chat HTTP/1.1" 200 -
+127.0.0.1 - - [31/Jan/2026 15:26:36] "OPTIONS /api/chat HTTP/1.1" 200 -
+127.0.0.1 - - [31/Jan/2026 15:26:36] "POST /api/chat HTTP/1.1" 200 -

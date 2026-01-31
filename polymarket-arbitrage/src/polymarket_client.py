@@ -4,18 +4,22 @@ Wrapper for Polymarket CLOB API
 """
 
 import logging
-from typing import Dict, List, Optional
 import time
 from decimal import Decimal
+from typing import Dict, List, Optional
 
 try:
-    from py_clob_client.client import ClobClient, ApiCreds
+    from py_clob_client.client import ApiCreds, ClobClient
     from py_clob_client.clob_types import OrderArgs, OrderType
     from py_clob_client.order_builder.constants import BUY, SELL
 except ImportError:
     logging.warning("py-clob-client not installed. Running in simulation mode.")
     ClobClient = None
     ApiCreds = None
+    OrderArgs = None
+    OrderType = None
+    BUY = "buy"
+    SELL = "sell"
 
 
 class PolymarketClient:
@@ -337,7 +341,7 @@ class PolymarketClient:
     def _simulate_execution(self, opportunity: Dict) -> Dict:
         """Simulate trade execution"""
         import random
-        
+
         # Simulate with 95% success rate
         success = random.random() > 0.05
         

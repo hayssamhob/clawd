@@ -3,10 +3,10 @@ Opportunity Scanner
 Scans Polymarket markets for arbitrage opportunities
 """
 
-import logging
-from typing import Dict, List
 import asyncio
+import logging
 from datetime import datetime
+from typing import Dict, List, Optional
 
 
 class OpportunityScanner:
