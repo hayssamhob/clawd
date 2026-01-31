@@ -1,0 +1,124 @@
+# Polymarket Arbitrage Bot Configuration
+
+polymarket:
+  # API configuration
+  api_endpoint: "https://clob.polymarket.com"
+  chain_id: 137  # Polygon mainnet
+  
+  # Trading parameters
+  min_profit_threshold: 0.015  # 1.5% minimum profit after fees
+  max_position_size: 100       # Maximum $100 per trade
+  slippage_tolerance: 0.005    # 0.5% slippage tolerance
+  
+  # Fee structure
+  maker_fee: 0.0000  # Maker fee (currently 0%)
+  taker_fee: 0.0000  # Taker fee (currently 0%)
+  gas_estimate: 0.50 # Estimated gas cost in USDC
+
+risk_management:
+  # Loss limits
+  max_daily_loss: 500          # Max $500 loss per day
+  max_weekly_loss: 1500        # Max $1500 loss per week
+  stop_loss_percentage: 0.10   # 10% stop loss per position
+  
+  # Position limits
+  max_open_positions: 5        # Max concurrent positions
+  max_position_percentage: 0.20 # Max 20% of capital per position
+  
+  # Circuit breakers
+  consecutive_loss_limit: 3    # Stop after 3 consecutive losses
+  pause_duration_minutes: 30   # Pause duration after circuit breaker
+
+scanner:
+  # Scanning configuration
+  scan_interval: 15            # Scan every 15 seconds
+  max_concurrent_scans: 10     # Max parallel market scans
+  
+  # Market filters
+  markets:
+    - "Politics"
+    - "Crypto"
+    - "Sports"
+    - "Business"
+  
+  # Opportunity filters
+  min_liquidity: 1000          # Minimum $1000 liquidity
+  min_volume_24h: 5000         # Minimum $5000 24h volume
+  max_spread: 0.05             # Maximum 5% spread
+
+notifications:
+  # Telegram settings
+  telegram:
+    enabled: true
+    bot_token: "${TELEGRAM_BOT_TOKEN}"  # From environment
+    chat_id: "${TELEGRAM_CHAT_ID}"      # From environment
+    
+    # Alert thresholds
+    notify_on_opportunity: true
+    notify_on_trade: true
+    notify_on_profit: true
+    notify_on_loss: true
+    notify_on_circuit_breaker: true
+    
+    # Quiet hours (optional)
+    quiet_hours:
+      enabled: false
+      start: "22:00"
+      end: "08:00"
+
+  # Email alerts (optional)
+  email:
+    enabled: false
+    smtp_server: "smtp.gmail.com"
+    smtp_port: 587
+    from_email: "your@email.com"
+    to_email: "alerts@email.com"
+    password: "${EMAIL_PASSWORD}"
+
+database:
+  # SQLite database path
+  path: "data/trades.db"
+  
+  # Backup settings
+  backup_enabled: true
+  backup_interval_hours: 24
+  backup_path: "data/backups/"
+
+logging:
+  # Log levels: DEBUG, INFO, WARNING, ERROR, CRITICAL
+  level: "INFO"
+  
+  # Log destinations
+  console: true
+  file: true
+  file_path: "logs/bot.log"
+  
+  # Log rotation
+  max_bytes: 10485760  # 10MB
+  backup_count: 5
+
+execution:
+  # Execution settings
+  mode: "live"  # Options: "dry_run", "paper", "live"
+  
+  # Order types
+  default_order_type: "limit"  # "market" or "limit"
+  order_timeout_seconds: 60
+  
+  # Retry logic
+  max_retries: 3
+  retry_delay_seconds: 5
+
+advanced:
+  # Advanced features
+  enable_hedging: false
+  enable_market_making: false
+  enable_multi_leg: false
+  
+  # Performance optimization
+  cache_market_data: true
+  cache_ttl_seconds: 30
+  
+  # API rate limits
+  max_requests_per_second: 10
+  rate_limit_strategy: "adaptive"  # "fixed" or "adaptive"
