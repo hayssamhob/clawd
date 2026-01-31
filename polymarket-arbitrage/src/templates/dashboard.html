@@ -1,11 +1,12 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="dark">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Polymarket Arbitrage Dashboard</title>
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <style>
       * {
         margin: 0;
@@ -194,6 +195,260 @@
         font-size: 0.8em;
         margin-top: 5px;
         opacity: 0.8;
+      }
+
+      /* Theme Variables */
+      :root {
+        --bg-primary: #0a0e27;
+        --bg-secondary: #1a1f3a;
+        --bg-tertiary: #2a2f4a;
+        --text-primary: #e0e0e0;
+        --text-secondary: #a0a0a0;
+        --accent: #667eea;
+        --accent-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        --success: #4ade80;
+        --error: #ef4444;
+        --warning: #f59e0b;
+      }
+
+      [data-theme="light"] {
+        --bg-primary: #f5f5f5;
+        --bg-secondary: #ffffff;
+        --bg-tertiary: #e0e0e0;
+        --text-primary: #1a1a1a;
+        --text-secondary: #666666;
+      }
+
+      body {
+        background: var(--bg-primary);
+        color: var(--text-primary);
+      }
+
+      .card {
+        background: var(--bg-secondary);
+      }
+
+      .stat-label {
+        color: var(--text-secondary);
+      }
+
+      /* Theme Toggle */
+      .theme-toggle {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 1001;
+        background: var(--bg-secondary);
+        border: none;
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        cursor: pointer;
+        font-size: 1.2em;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+      }
+
+      /* Settings Modal */
+      .modal-overlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.7);
+        z-index: 2000;
+        justify-content: center;
+        align-items: center;
+      }
+
+      .modal-overlay.active {
+        display: flex;
+      }
+
+      .modal {
+        background: var(--bg-secondary);
+        border-radius: 15px;
+        padding: 30px;
+        max-width: 600px;
+        width: 90%;
+        max-height: 80vh;
+        overflow-y: auto;
+      }
+
+      .modal h2 {
+        margin-bottom: 20px;
+        color: var(--accent);
+      }
+
+      .modal-close {
+        position: absolute;
+        top: 15px;
+        right: 15px;
+        background: none;
+        border: none;
+        color: var(--text-primary);
+        font-size: 1.5em;
+        cursor: pointer;
+      }
+
+      .form-group {
+        margin-bottom: 15px;
+      }
+
+      .form-group label {
+        display: block;
+        margin-bottom: 5px;
+        color: var(--text-secondary);
+        font-size: 0.9em;
+      }
+
+      .form-group input,
+      .form-group select {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid var(--bg-tertiary);
+        border-radius: 8px;
+        background: var(--bg-primary);
+        color: var(--text-primary);
+        font-size: 1em;
+      }
+
+      .form-group input:focus,
+      .form-group select:focus {
+        outline: none;
+        border-color: var(--accent);
+      }
+
+      .form-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 15px;
+      }
+
+      /* Settings Button */
+      .settings-btn {
+        background: var(--bg-tertiary);
+        color: var(--text-primary);
+        border: none;
+        padding: 8px 16px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 0.9em;
+        margin-left: 10px;
+      }
+
+      /* Analytics Panel */
+      .analytics-grid {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 10px;
+        margin-top: 15px;
+      }
+
+      .analytics-item {
+        text-align: center;
+        padding: 10px;
+        background: var(--bg-tertiary);
+        border-radius: 8px;
+      }
+
+      .analytics-item .value {
+        font-size: 1.3em;
+        font-weight: bold;
+        color: var(--accent);
+      }
+
+      .analytics-item .label {
+        font-size: 0.8em;
+        color: var(--text-secondary);
+      }
+
+      /* Chart Period Selector */
+      .chart-controls {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 15px;
+      }
+
+      .chart-controls button {
+        padding: 5px 15px;
+        border: 1px solid var(--bg-tertiary);
+        background: transparent;
+        color: var(--text-primary);
+        border-radius: 5px;
+        cursor: pointer;
+      }
+
+      .chart-controls button.active {
+        background: var(--accent);
+        border-color: var(--accent);
+      }
+
+      /* Trade Row Hover */
+      .trade-row {
+        cursor: pointer;
+        transition: background 0.2s;
+      }
+
+      .trade-row:hover {
+        background: var(--bg-tertiary);
+      }
+
+      /* Clickable Market Links */
+      .market-link {
+        color: var(--accent);
+        text-decoration: none;
+      }
+
+      .market-link:hover {
+        text-decoration: underline;
+      }
+
+      /* Notification Center */
+      .notification-center {
+        position: fixed;
+        top: 70px;
+        right: 20px;
+        width: 350px;
+        max-height: 400px;
+        background: var(--bg-secondary);
+        border-radius: 10px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        display: none;
+        z-index: 1002;
+        overflow: hidden;
+      }
+
+      .notification-center.active {
+        display: block;
+      }
+
+      .notification-header {
+        padding: 15px;
+        border-bottom: 1px solid var(--bg-tertiary);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .notification-list {
+        max-height: 350px;
+        overflow-y: auto;
+      }
+
+      .notification-item {
+        padding: 12px 15px;
+        border-bottom: 1px solid var(--bg-tertiary);
+      }
+
+      .notification-item:last-child {
+        border-bottom: none;
+      }
+
+      .notification-time {
+        font-size: 0.8em;
+        color: var(--text-secondary);
       }
 
       /* Mobile Responsive */
@@ -472,8 +727,173 @@
     </style>
   </head>
   <body>
+    <!-- Theme Toggle Button -->
+    <button class="theme-toggle" id="theme-toggle" onclick="toggleTheme()">
+      🌙
+    </button>
+
     <!-- Toast Container for Notifications -->
     <div class="toast-container" id="toast-container"></div>
+
+    <!-- Notification Center -->
+    <div class="notification-center" id="notification-center">
+      <div class="notification-header">
+        <strong>🔔 Notifications</strong>
+        <button
+          onclick="clearNotifications()"
+          style="
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+          "
+        >
+          Clear All
+        </button>
+      </div>
+      <div class="notification-list" id="notification-list">
+        <div class="notification-item">
+          <div>No notifications yet</div>
+          <div class="notification-time">-</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div class="modal-overlay" id="settings-modal">
+      <div class="modal" style="position: relative">
+        <button class="modal-close" onclick="closeSettingsModal()">×</button>
+        <h2>⚙️ Bot Settings</h2>
+
+        <form id="settings-form" onsubmit="saveSettings(event)">
+          <h3
+            style="
+              margin-bottom: 15px;
+              font-size: 1em;
+              color: var(--text-secondary);
+            "
+          >
+            Trading Parameters
+          </h3>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>Min Net Margin (%)</label>
+              <input
+                type="number"
+                id="setting-min-margin"
+                step="0.1"
+                min="0"
+                max="100"
+                value="1.5"
+              />
+            </div>
+            <div class="form-group">
+              <label>Max Position Size ($)</label>
+              <input
+                type="number"
+                id="setting-max-position"
+                step="1"
+                min="1"
+                value="20"
+              />
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>Min Profit per Trade ($)</label>
+              <input
+                type="number"
+                id="setting-min-profit"
+                step="0.01"
+                min="0"
+                value="0.30"
+              />
+            </div>
+            <div class="form-group">
+              <label>Total Capital ($)</label>
+              <input
+                type="number"
+                id="setting-capital"
+                step="1"
+                min="1"
+                value="100"
+              />
+            </div>
+          </div>
+
+          <h3
+            style="
+              margin: 20px 0 15px;
+              font-size: 1em;
+              color: var(--text-secondary);
+            "
+          >
+            Risk Management
+          </h3>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>Max Daily Loss ($)</label>
+              <input
+                type="number"
+                id="setting-max-daily-loss"
+                step="1"
+                min="0"
+                value="10"
+              />
+            </div>
+            <div class="form-group">
+              <label>Max Open Positions</label>
+              <input
+                type="number"
+                id="setting-max-positions"
+                step="1"
+                min="1"
+                max="10"
+                value="4"
+              />
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>Execution Mode</label>
+              <select id="setting-mode">
+                <option value="dry_run">Dry Run (Simulation)</option>
+                <option value="live">Live Trading</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Scan Interval (seconds)</label>
+              <input
+                type="number"
+                id="setting-scan-interval"
+                step="1"
+                min="1"
+                max="60"
+                value="3"
+              />
+            </div>
+          </div>
+
+          <div style="margin-top: 25px; display: flex; gap: 10px">
+            <button type="submit" class="btn btn-start" style="flex: 1">
+              💾 Save Settings
+            </button>
+            <button
+              type="button"
+              class="btn btn-stop"
+              onclick="closeSettingsModal()"
+              style="flex: 1"
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
 
     <div class="header">
       <h1>🦞 Polymarket Arbitrage Bot</h1>
@@ -511,6 +931,39 @@
         >
           🔄 Restart
         </button>
+        <button class="settings-btn" onclick="openSettingsModal()">
+          ⚙️ Settings
+        </button>
+        <button class="settings-btn" onclick="toggleNotificationCenter()">
+          🔔
+        </button>
+      </div>
+    </div>
+
+    <!-- Performance Analytics Panel -->
+    <div class="card" style="margin-bottom: 20px">
+      <h2>📊 Performance Analytics</h2>
+      <div class="analytics-grid" id="analytics-panel">
+        <div class="analytics-item">
+          <div class="value" id="analytics-sharpe">-</div>
+          <div class="label">Sharpe Ratio</div>
+        </div>
+        <div class="analytics-item">
+          <div class="value" id="analytics-drawdown">-</div>
+          <div class="label">Max Drawdown</div>
+        </div>
+        <div class="analytics-item">
+          <div class="value" id="analytics-profit-factor">-</div>
+          <div class="label">Profit Factor</div>
+        </div>
+        <div class="analytics-item">
+          <div class="value profit" id="analytics-avg-win">-</div>
+          <div class="label">Avg Win</div>
+        </div>
+        <div class="analytics-item">
+          <div class="value loss" id="analytics-avg-loss">-</div>
+          <div class="label">Avg Loss</div>
+        </div>
       </div>
     </div>
 
@@ -583,6 +1036,40 @@
       </div>
     </div>
 
+    <!-- Market Explorer Panel -->
+    <div class="card" style="margin-bottom: 20px">
+      <h2>
+        🔍 Market Explorer
+        <button
+          class="settings-btn"
+          onclick="refreshMarkets()"
+          style="float: right"
+        >
+          🔄 Refresh
+        </button>
+      </h2>
+      <p
+        style="
+          color: var(--text-secondary);
+          margin-bottom: 15px;
+          font-size: 0.9em;
+        "
+      >
+        Live YES/NO markets with potential arbitrage opportunities
+      </p>
+      <div id="market-explorer" style="max-height: 300px; overflow-y: auto">
+        <div
+          style="
+            text-align: center;
+            color: var(--text-secondary);
+            padding: 20px;
+          "
+        >
+          <span class="spinner"></span> Loading markets...
+        </div>
+      </div>
+    </div>
+
     <!-- Decision Logic Panel -->
     <div class="card" style="margin-bottom: 20px">
       <h2>🧠 Decision Logic & Assessment Criteria</h2>
@@ -595,6 +1082,12 @@
     <div class="grid">
       <div class="card">
         <h2>Profit Chart</h2>
+        <div class="chart-controls">
+          <button class="active" onclick="updateChartPeriod(1)">24h</button>
+          <button onclick="updateChartPeriod(7)">7d</button>
+          <button onclick="updateChartPeriod(30)">30d</button>
+          <button onclick="updateChartPeriod(365)">All</button>
+        </div>
         <div id="profit-chart"></div>
       </div>
 
@@ -642,10 +1135,59 @@
               float: right;
               text-decoration: none;
             "
+            >📥 Export CSV</a
           >
-            📥 Export CSV
-          </a>
         </h2>
+        <!-- Trade Filters -->
+        <div
+          style="display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap"
+        >
+          <input
+            type="text"
+            id="trade-filter-search"
+            placeholder="🔍 Search markets..."
+            style="
+              flex: 1;
+              min-width: 150px;
+              padding: 8px;
+              border-radius: 5px;
+              border: 1px solid var(--bg-tertiary);
+              background: var(--bg-primary);
+              color: var(--text-primary);
+            "
+            onkeyup="filterTrades()"
+          />
+          <select
+            id="trade-filter-status"
+            style="
+              padding: 8px;
+              border-radius: 5px;
+              border: 1px solid var(--bg-tertiary);
+              background: var(--bg-primary);
+              color: var(--text-primary);
+            "
+            onchange="filterTrades()"
+          >
+            <option value="">All Status</option>
+            <option value="success">Success</option>
+            <option value="failed">Failed</option>
+          </select>
+          <select
+            id="trade-filter-profit"
+            style="
+              padding: 8px;
+              border-radius: 5px;
+              border: 1px solid var(--bg-tertiary);
+              background: var(--bg-primary);
+              color: var(--text-primary);
+            "
+            onchange="filterTrades()"
+          >
+            <option value="">All Trades</option>
+            <option value="profit">Profitable</option>
+            <option value="loss">Losses</option>
+          </select>
+        </div>
         <div style="overflow-x: auto">
           <table class="trades-table">
             <thead>
@@ -1000,26 +1542,531 @@
         }
       }
 
-      // Auto-refresh
+      // WebSocket Connection
+      let socket = null;
+      let useWebSocket = true;
+
+      function initWebSocket() {
+        try {
+          socket = io();
+
+          socket.on("connect", function () {
+            console.log("WebSocket connected");
+            updateConnectionStatus(true);
+            showToast("Connected to server", "success");
+          });
+
+          socket.on("disconnect", function () {
+            console.log("WebSocket disconnected");
+            updateConnectionStatus(false);
+            showToast("Disconnected from server", "warning");
+          });
+
+          socket.on("status_update", function (data) {
+            handleStatusUpdate(data);
+          });
+
+          socket.on("trades_update", function (data) {
+            handleTradesUpdate(data);
+          });
+
+          socket.on("connect_error", function (error) {
+            console.log("WebSocket error, falling back to polling");
+            useWebSocket = false;
+            updateConnectionStatus(false);
+          });
+        } catch (e) {
+          console.log("WebSocket not available, using polling");
+          useWebSocket = false;
+        }
+      }
+
+      function handleStatusUpdate(data) {
+        if (data.error) return;
+
+        const statusDiv = document.getElementById("bot-status");
+        const statusText = document.getElementById("status-text");
+
+        if (data.running) {
+          statusDiv.querySelector(".status-indicator").className =
+            "status-indicator status-running";
+          statusText.textContent = `Running (${data.mode === "live" ? "LIVE" : "DRY RUN"} Mode)`;
+          updateButtonStates("running");
+        } else {
+          statusDiv.querySelector(".status-indicator").className =
+            "status-indicator status-stopped";
+          statusText.textContent = "Stopped";
+          updateButtonStates("stopped");
+        }
+
+        document.getElementById("today-trades").textContent = data.today.trades;
+        document.getElementById("today-winrate").textContent =
+          data.today.trades > 0
+            ? `${((data.today.wins / data.today.trades) * 100).toFixed(1)}%`
+            : "0%";
+        document.getElementById("today-profit").textContent =
+          `$${data.today.profit.toFixed(2)}`;
+        document.getElementById("alltime-trades").textContent =
+          data.all_time.trades;
+        document.getElementById("alltime-profit").textContent =
+          `$${data.all_time.profit.toFixed(2)}`;
+        document.getElementById("best-trade").textContent =
+          `$${data.today.best_trade.toFixed(2)}`;
+      }
+
+      function handleTradesUpdate(trades) {
+        if (trades.error) return;
+
+        const tbody = document.getElementById("trades-body");
+        if (!trades || trades.length === 0) {
+          tbody.innerHTML =
+            '<tr><td colspan="4" style="text-align: center; color: #a0a0a0;">No trades yet...</td></tr>';
+          return;
+        }
+
+        tbody.innerHTML = trades
+          .map((trade) => {
+            const time = new Date(trade.timestamp * 1000).toLocaleTimeString();
+            const profitClass = trade.actual_profit >= 0 ? "profit" : "loss";
+            const statusBadge =
+              trade.status === "success" ? "badge-success" : "badge-failed";
+
+            return `
+            <tr class="trade-row" onclick="showTradeDetails(${trade.id})">
+              <td>${time}</td>
+              <td title="${trade.market}">${trade.market.substring(0, 30)}...</td>
+              <td class="${profitClass}">$${trade.actual_profit.toFixed(2)}</td>
+              <td><span class="badge ${statusBadge}">${trade.status}</span></td>
+            </tr>
+          `;
+          })
+          .join("");
+      }
+
+      // Auto-refresh (fallback for when WebSocket not available)
       function refreshAll() {
-        updateStatus();
-        updateTrades();
+        if (!useWebSocket) {
+          updateStatus();
+          updateTrades();
+        }
         updateChart();
         updateLogs();
-        updateConnectionStatus(true);
       }
+
+      // Initialize WebSocket
+      initWebSocket();
 
       // Initial load
       refreshAll();
       loadDecisionLogic();
+      loadAnalytics();
 
       // Handle connection errors
       window.addEventListener("unhandledrejection", (event) => {
         updateConnectionStatus(false);
       });
 
-      // Refresh every 3 seconds
-      setInterval(refreshAll, 3000);
+      // Refresh chart and logs every 5 seconds (WebSocket handles status/trades)
+      setInterval(refreshAll, 5000);
+
+      // Load analytics data
+      async function loadAnalytics() {
+        try {
+          const response = await fetch("/api/analytics");
+          const data = await response.json();
+
+          if (data.error) return;
+
+          // Update individual analytics elements
+          document.getElementById("analytics-sharpe").textContent =
+            data.sharpe_ratio || "-";
+          document.getElementById("analytics-drawdown").textContent =
+            data.max_drawdown ? `${data.max_drawdown}%` : "-";
+          document.getElementById("analytics-profit-factor").textContent =
+            data.profit_factor || "-";
+          document.getElementById("analytics-avg-win").textContent =
+            data.avg_win ? `$${data.avg_win}` : "-";
+          document.getElementById("analytics-avg-loss").textContent =
+            data.avg_loss ? `$${data.avg_loss}` : "-";
+        } catch (error) {
+          console.error("Error loading analytics:", error);
+        }
+      }
+
+      // Trade details modal
+      function showTradeDetails(tradeId) {
+        console.log("Show trade details for:", tradeId);
+        showToast(`Trade #${tradeId} details`, "info");
+      }
+
+      // Theme Toggle
+      function toggleTheme() {
+        const html = document.documentElement;
+        const currentTheme = html.getAttribute("data-theme");
+        const newTheme = currentTheme === "dark" ? "light" : "dark";
+        html.setAttribute("data-theme", newTheme);
+        document.getElementById("theme-toggle").textContent =
+          newTheme === "dark" ? "🌙" : "☀️";
+        localStorage.setItem("theme", newTheme);
+      }
+
+      // Load saved theme
+      const savedTheme = localStorage.getItem("theme") || "dark";
+      document.documentElement.setAttribute("data-theme", savedTheme);
+      document.getElementById("theme-toggle").textContent =
+        savedTheme === "dark" ? "🌙" : "☀️";
+
+      // Settings Modal Functions
+      function openSettingsModal() {
+        document.getElementById("settings-modal").classList.add("active");
+        loadCurrentSettings();
+      }
+
+      function closeSettingsModal() {
+        document.getElementById("settings-modal").classList.remove("active");
+      }
+
+      async function loadCurrentSettings() {
+        try {
+          const response = await fetch("/api/config");
+          const config = await response.json();
+
+          if (config.polymarket) {
+            document.getElementById("setting-min-margin").value =
+              (config.polymarket.min_net_margin || 0.015) * 100;
+            document.getElementById("setting-max-position").value =
+              config.polymarket.max_position_size || 20;
+            document.getElementById("setting-min-profit").value =
+              config.polymarket.min_profit_per_trade || 0.3;
+          }
+          if (config.capital) {
+            document.getElementById("setting-capital").value =
+              config.capital.total_capital || 100;
+          }
+          if (config.risk_management) {
+            document.getElementById("setting-max-daily-loss").value =
+              config.risk_management.max_daily_loss || 10;
+            document.getElementById("setting-max-positions").value =
+              config.risk_management.max_open_positions || 4;
+          }
+          if (config.execution) {
+            document.getElementById("setting-mode").value =
+              config.execution.mode || "dry_run";
+          }
+          if (config.scanner) {
+            document.getElementById("setting-scan-interval").value =
+              config.scanner.scan_interval || 3;
+          }
+        } catch (error) {
+          console.error("Error loading settings:", error);
+        }
+      }
+
+      async function saveSettings(event) {
+        event.preventDefault();
+
+        const newConfig = {
+          polymarket: {
+            min_net_margin:
+              parseFloat(document.getElementById("setting-min-margin").value) /
+              100,
+            max_position_size: parseFloat(
+              document.getElementById("setting-max-position").value,
+            ),
+            min_profit_per_trade: parseFloat(
+              document.getElementById("setting-min-profit").value,
+            ),
+          },
+          capital: {
+            total_capital: parseFloat(
+              document.getElementById("setting-capital").value,
+            ),
+          },
+          risk_management: {
+            max_daily_loss: parseFloat(
+              document.getElementById("setting-max-daily-loss").value,
+            ),
+            max_open_positions: parseInt(
+              document.getElementById("setting-max-positions").value,
+            ),
+          },
+          execution: {
+            mode: document.getElementById("setting-mode").value,
+          },
+          scanner: {
+            scan_interval: parseInt(
+              document.getElementById("setting-scan-interval").value,
+            ),
+          },
+        };
+
+        try {
+          const response = await fetch("/api/config", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(newConfig),
+          });
+
+          const result = await response.json();
+
+          if (result.success) {
+            showToast("Settings saved successfully!", "success");
+            closeSettingsModal();
+            addNotification("Settings updated");
+          } else {
+            showToast(result.error || "Failed to save settings", "error");
+          }
+        } catch (error) {
+          console.error("Error saving settings:", error);
+          showToast("Error saving settings", "error");
+        }
+      }
+
+      // Notification Center
+      let notifications = [];
+
+      function toggleNotificationCenter() {
+        document
+          .getElementById("notification-center")
+          .classList.toggle("active");
+      }
+
+      function addNotification(message) {
+        const now = new Date();
+        notifications.unshift({
+          message: message,
+          time: now.toLocaleTimeString(),
+        });
+
+        // Keep only last 20 notifications
+        if (notifications.length > 20) {
+          notifications = notifications.slice(0, 20);
+        }
+
+        updateNotificationList();
+      }
+
+      function updateNotificationList() {
+        const list = document.getElementById("notification-list");
+
+        if (notifications.length === 0) {
+          list.innerHTML =
+            '<div class="notification-item"><div>No notifications yet</div><div class="notification-time">-</div></div>';
+          return;
+        }
+
+        list.innerHTML = notifications
+          .map(
+            (n) => `
+          <div class="notification-item">
+            <div>${n.message}</div>
+            <div class="notification-time">${n.time}</div>
+          </div>
+        `,
+          )
+          .join("");
+      }
+
+      function clearNotifications() {
+        notifications = [];
+        updateNotificationList();
+        showToast("Notifications cleared", "info");
+      }
+
+      // Chart Period Selector
+      let currentChartPeriod = 7;
+
+      async function updateChartPeriod(days) {
+        currentChartPeriod = days;
+
+        // Update button states
+        document.querySelectorAll(".chart-controls button").forEach((btn) => {
+          btn.classList.remove("active");
+        });
+        event.target.classList.add("active");
+
+        // Fetch and update chart
+        try {
+          const response = await fetch(`/api/chart/profit?days=${days}`);
+          const chartData = await response.json();
+
+          if (chartData.data) {
+            Plotly.newPlot("profit-chart", chartData.data, chartData.layout);
+          }
+        } catch (error) {
+          console.error("Error updating chart:", error);
+        }
+      }
+
+      // Close modals when clicking outside
+      document
+        .getElementById("settings-modal")
+        .addEventListener("click", function (e) {
+          if (e.target === this) {
+            closeSettingsModal();
+          }
+        });
+
+      // Close notification center when clicking outside
+      document.addEventListener("click", function (e) {
+        const nc = document.getElementById("notification-center");
+        const bell = e.target.closest(".settings-btn");
+        if (!nc.contains(e.target) && !bell) {
+          nc.classList.remove("active");
+        }
+      });
+
+      // Refresh analytics periodically
+      setInterval(loadAnalytics, 30000);
+
+      // Trade Filtering
+      let allTrades = [];
+
+      function filterTrades() {
+        const search = document
+          .getElementById("trade-filter-search")
+          .value.toLowerCase();
+        const status = document.getElementById("trade-filter-status").value;
+        const profit = document.getElementById("trade-filter-profit").value;
+
+        let filtered = allTrades.filter((trade) => {
+          const matchSearch =
+            !search || trade.market.toLowerCase().includes(search);
+          const matchStatus = !status || trade.status === status;
+          const matchProfit =
+            !profit ||
+            (profit === "profit" && trade.actual_profit > 0) ||
+            (profit === "loss" && trade.actual_profit <= 0);
+          return matchSearch && matchStatus && matchProfit;
+        });
+
+        renderTradesTable(filtered);
+      }
+
+      function renderTradesTable(trades) {
+        const tbody = document.getElementById("trades-body");
+        if (!trades || trades.length === 0) {
+          tbody.innerHTML =
+            '<tr><td colspan="4" style="text-align: center; color: var(--text-secondary);">No trades match filters...</td></tr>';
+          return;
+        }
+
+        tbody.innerHTML = trades
+          .map((trade) => {
+            const time = new Date(trade.timestamp * 1000).toLocaleTimeString();
+            const profitClass = trade.actual_profit >= 0 ? "profit" : "loss";
+            const statusBadge =
+              trade.status === "success" ? "badge-success" : "badge-failed";
+            const marketUrl = `https://polymarket.com/event/${trade.market_id || ""}`;
+
+            return `
+            <tr class="trade-row" onclick="openTradeModal(${JSON.stringify(trade).replace(/"/g, "&quot;")})">
+              <td>${time}</td>
+              <td><a href="${marketUrl}" target="_blank" class="market-link" onclick="event.stopPropagation()">${trade.market.substring(0, 30)}...</a></td>
+              <td class="${profitClass}">$${trade.actual_profit.toFixed(2)}</td>
+              <td><span class="badge ${statusBadge}">${trade.status}</span></td>
+            </tr>
+          `;
+          })
+          .join("");
+      }
+
+      // Trade Details Modal
+      function openTradeModal(trade) {
+        const modal = document.createElement("div");
+        modal.className = "modal-overlay active";
+        modal.id = "trade-detail-modal";
+        modal.innerHTML = `
+          <div class="modal" style="position:relative;max-width:500px;">
+            <button class="modal-close" onclick="closeTradeModal()">×</button>
+            <h2>📊 Trade Details</h2>
+            <div class="stat"><span class="stat-label">Market</span><span class="stat-value" style="font-size:0.9em;">${trade.market}</span></div>
+            <div class="stat"><span class="stat-label">Time</span><span class="stat-value">${new Date(trade.timestamp * 1000).toLocaleString()}</span></div>
+            <div class="stat"><span class="stat-label">Type</span><span class="stat-value">${trade.type || "YES/NO Arbitrage"}</span></div>
+            <div class="stat"><span class="stat-label">Expected Profit</span><span class="stat-value">$${trade.expected_profit.toFixed(4)}</span></div>
+            <div class="stat"><span class="stat-label">Actual Profit</span><span class="stat-value ${trade.actual_profit >= 0 ? "profit" : "loss"}">$${trade.actual_profit.toFixed(4)}</span></div>
+            <div class="stat"><span class="stat-label">Status</span><span class="stat-value">${trade.status}</span></div>
+            <div class="stat"><span class="stat-label">Simulated</span><span class="stat-value">${trade.simulated ? "Yes" : "No"}</span></div>
+            <div style="margin-top:20px;">
+              <a href="https://polymarket.com" target="_blank" class="btn btn-restart" style="text-decoration:none;display:inline-block;">🔗 View on Polymarket</a>
+            </div>
+          </div>
+        `;
+        modal.onclick = (e) => {
+          if (e.target === modal) closeTradeModal();
+        };
+        document.body.appendChild(modal);
+      }
+
+      function closeTradeModal() {
+        const modal = document.getElementById("trade-detail-modal");
+        if (modal) modal.remove();
+      }
+
+      // Market Explorer
+      async function refreshMarkets() {
+        const container = document.getElementById("market-explorer");
+        container.innerHTML =
+          '<div style="text-align:center;color:var(--text-secondary);padding:20px;"><span class="spinner"></span> Loading markets...</div>';
+
+        try {
+          const response = await fetch("/api/markets");
+          const data = await response.json();
+
+          if (data.markets && data.markets.length > 0) {
+            container.innerHTML = data.markets
+              .map((market) => {
+                const combined =
+                  (market.yes_price || 0) + (market.no_price || 0);
+                const margin = 1 - combined;
+                const isArbitrage = margin > 0.015;
+
+                return `
+                <div style="display:flex;justify-content:space-between;align-items:center;padding:12px;border-bottom:1px solid var(--bg-tertiary);${isArbitrage ? "background:rgba(74,222,128,0.1);" : ""}">
+                  <div style="flex:1;">
+                    <div style="font-weight:bold;margin-bottom:5px;">${market.name || "Unknown Market"}</div>
+                    <div style="font-size:0.85em;color:var(--text-secondary);">
+                      YES: $${(market.yes_price || 0).toFixed(2)} | NO: $${(market.no_price || 0).toFixed(2)}
+                    </div>
+                  </div>
+                  <div style="text-align:right;">
+                    <div style="font-size:0.9em;color:${isArbitrage ? "#4ade80" : "var(--text-secondary)"};">
+                      ${isArbitrage ? "✅ Arbitrage" : "❌ No Arb"}
+                    </div>
+                    <div style="font-size:0.8em;color:var(--text-secondary);">
+                      Margin: ${(margin * 100).toFixed(2)}%
+                    </div>
+                  </div>
+                </div>
+              `;
+              })
+              .join("");
+          } else {
+            container.innerHTML = `
+              <div style="text-align:center;padding:30px;color:var(--text-secondary);">
+                <div style="font-size:2em;margin-bottom:10px;">📊</div>
+                <div>No markets available</div>
+                <div style="font-size:0.85em;margin-top:5px;">Markets will appear when the bot is connected to Polymarket API</div>
+              </div>
+            `;
+          }
+        } catch (error) {
+          console.error("Error loading markets:", error);
+          container.innerHTML = `
+            <div style="text-align:center;padding:30px;color:var(--text-secondary);">
+              <div style="font-size:2em;margin-bottom:10px;">⚠️</div>
+              <div>Could not load markets</div>
+              <div style="font-size:0.85em;margin-top:5px;">Check API connection</div>
+            </div>
+          `;
+        }
+      }
+
+      // Load markets on page load
+      refreshMarkets();
+
+      // Refresh markets every 30 seconds
+      setInterval(refreshMarkets, 30000);
     </script>
   </body>
 </html>
