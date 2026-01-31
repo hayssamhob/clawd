@@ -89,11 +89,12 @@ class PolymarketClient:
             Dict with 'balance' (total USDC) and 'available' (not in open orders)
         """
         if self.simulation_mode:
-            # Return simulated balance
+            # Return simulated balance with locked field for consistency
             return {
                 'balance': 100.0,
                 'available': 100.0,
-                'currency': 'USDC'
+                'currency': 'USDC',
+                'locked': 0.0
             }
 
         try:

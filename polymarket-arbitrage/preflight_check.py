@@ -147,9 +147,10 @@ def main():
     print_section("5. Polymarket API Connection")
 
     try:
-        from src.polymarket_client import PolymarketClient
-        from dotenv import load_dotenv
         import yaml
+        from dotenv import load_dotenv
+
+        from src.polymarket_client import PolymarketClient
 
         load_dotenv()
         with open('config/config.yaml') as f:
@@ -183,9 +184,8 @@ def main():
                     warnings.append(f"Low balance: ${balance.get('available', 0):.2f} (need ${min_balance})")
 
     except Exception as e:
-        print(f"  ❌ Connection error: {e}")
-        import traceback
-        print(f"     {traceback.format_exc()}")
+        print(f"  ❌ Connection error: {type(e).__name__}")
+        print(f"     Check your network connection and API credentials")
         all_checks_passed = False
 
     # 6. Check Wallet Address
@@ -197,29 +197,34 @@ def main():
 
         if private_key:
             account = Account.from_key(private_key)
-            print(f"  ✅ Wallet address: {account.address}")
+            # Only show first and last 4 characters of address for security
+            addr = account.address
+            masked_addr = f"{addr[:6]}...{addr[-4:]}"
+            print(f"  ✅ Wallet address: {masked_addr}")
             print(f"  ℹ️  Chain: Polygon (Chain ID: 137)")
-
-            # Verify it matches expected address
-            expected = "0x59Df0d60F0e9137c2F008D2c874DA9E878BF7707"
-            if account.address.lower() == expected.lower():
-                print(f"  ✅ Address matches expected: {expected}")
+            
+            # Check if EXPECTED_WALLET_ADDRESS is set in .env for validation
+            expected = os.getenv('EXPECTED_WALLET_ADDRESS')
+            if expected:
+                if account.address.lower() == expected.lower():
+                    print(f"  ✅ Address matches expected configuration")
+                else:
+                    print(f"  ⚠️  Address mismatch with EXPECTED_WALLET_ADDRESS!")
+                    warnings.append("Wallet address mismatch - verify your private key")
             else:
-                print(f"  ⚠️  Address mismatch!")
-                print(f"     Expected: {expected}")
-                print(f"     Got:      {account.address}")
-                warnings.append("Wallet address mismatch")
+                print(f"  ℹ️  Set EXPECTED_WALLET_ADDRESS in .env to enable address verification")
 
         else:
             print("  ❌ Private key not set")
             all_checks_passed = False
 
     except ImportError:
-        print("  ⚠️  eth-account not installed (installing...)")
-        os.system("pip3 install -q eth-account")
-        warnings.append("Had to install eth-account")
+        print("  ⚠️  eth-account not installed")
+        print("     Install with: pip3 install eth-account")
+        warnings.append("eth-account package not installed")
     except Exception as e:
-        print(f"  ❌ Wallet error: {e}")
+        print(f"  ❌ Wallet error: {type(e).__name__}")
+        print(f"     Verify your POLYMARKET_PRIVATE_KEY is valid")
         all_checks_passed = False
 
     # 7. Final Summary

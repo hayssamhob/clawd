@@ -52,16 +52,35 @@ echo -e "${GREEN}🗄️  Initializing database...${NC}"
 python3 -c "from src.database import Database; db = Database('data/trades.db'); print('Database initialized')"
 echo -e "${GREEN}✅ Database ready${NC}"
 
-# Kill any existing processes
+# PID files for safe process management
+BOT_PID_FILE="$PROJECT_DIR/.bot.pid"
+DASHBOARD_PID_FILE="$PROJECT_DIR/.dashboard.pid"
+
+# Kill any existing processes using PID files (safer than pkill)
 echo -e "${YELLOW}🔄 Stopping existing processes...${NC}"
-pkill -f "arbitrage_bot.py" || true
-pkill -f "dashboard.py" || true
+if [ -f "$BOT_PID_FILE" ]; then
+    BOT_PID=$(cat "$BOT_PID_FILE")
+    if kill -0 "$BOT_PID" 2>/dev/null; then
+        kill "$BOT_PID" 2>/dev/null || true
+        echo -e "   Stopped bot (PID: $BOT_PID)"
+    fi
+    rm -f "$BOT_PID_FILE"
+fi
+if [ -f "$DASHBOARD_PID_FILE" ]; then
+    DASHBOARD_PID=$(cat "$DASHBOARD_PID_FILE")
+    if kill -0 "$DASHBOARD_PID" 2>/dev/null; then
+        kill "$DASHBOARD_PID" 2>/dev/null || true
+        echo -e "   Stopped dashboard (PID: $DASHBOARD_PID)"
+    fi
+    rm -f "$DASHBOARD_PID_FILE"
+fi
 sleep 2
 
 # Start dashboard in background
 echo -e "${GREEN}🌐 Starting dashboard server (port 8000)...${NC}"
 python3 src/dashboard.py > logs/dashboard.log 2>&1 &
 DASHBOARD_PID=$!
+echo "$DASHBOARD_PID" > "$DASHBOARD_PID_FILE"
 echo -e "${GREEN}   Dashboard PID: $DASHBOARD_PID${NC}"
 
 # Wait for dashboard to start
@@ -72,8 +91,24 @@ echo -e "${GREEN}🤖 Starting arbitrage bot...${NC}"
 echo -e "${BLUE}═══════════════════════════════════════${NC}"
 echo
 
-# Run bot in foreground (shows output)
-python3 src/arbitrage_bot.py
+# Cleanup function
+cleanup() {
+    echo -e "\n${YELLOW}Shutting down...${NC}"
+    if [ -f "$BOT_PID_FILE" ]; then
+        rm -f "$BOT_PID_FILE"
+    fi
+    if [ -f "$DASHBOARD_PID_FILE" ]; then
+        kill $(cat "$DASHBOARD_PID_FILE") 2>/dev/null || true
+        rm -f "$DASHBOARD_PID_FILE"
+    fi
+}
+trap cleanup EXIT
 
-# Cleanup on exit
-trap "echo -e '\n${YELLOW}Shutting down...${NC}'; kill $DASHBOARD_PID 2>/dev/null || true" EXIT
+# Run bot in foreground (shows output) and save PID
+python3 src/arbitrage_bot.py &
+BOT_PID=$!
+echo "$BOT_PID" > "$BOT_PID_FILE"
+echo -e "${GREEN}   Bot PID: $BOT_PID${NC}"
+
+# Wait for bot process
+wait $BOT_PID

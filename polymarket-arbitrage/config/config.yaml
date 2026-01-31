@@ -1,184 +1,122 @@
-# Polymarket Arbitrage Bot Configuration
-# SPECIALIZED FOR 15-MINUTE CRYPTO YES/NO ARBITRAGE
-
-# Capital Settings
-capital:
-  total_capital: 100 # Starting capital: $100
-  reserve_ratio: 0.20 # Keep 20% as reserve ($20)
-  max_deployment_ratio: 0.80 # Deploy max 80% ($80)
-  max_single_position: 20 # Max 20% per trade ($20)
-
-polymarket:
-  # API configuration
-  api_endpoint: "https://clob.polymarket.com"
-  chain_id: 137 # Polygon mainnet
-
-  # Trading parameters for YES/NO arbitrage
-  min_gross_margin: 0.025 # 2.5% minimum gross margin
-  min_net_margin: 0.015 # 1.5% minimum net margin after fees
-  min_dollar_profit: 0.30 # Minimum $0.30 profit per trade (scaled for $100)
-  max_position_size: 20 # Maximum $20 per trade (20% of $100)
-  slippage_tolerance: 0.005 # 0.5% slippage tolerance (tighter)
-
-  # Fee structure
-  maker_fee: 0.0000 # Maker fee (currently 0%)
-  taker_fee: 0.0000 # Taker fee (currently 0%)
-  platform_fee: 0.02 # 2% Polymarket fee on winning side
-  gas_estimate: 0.05 # ~$0.05 gas on Polygon per transaction
-
-risk_management:
-  # Loss limits (should NEVER trigger with proper YES/NO arbitrage)
-  max_daily_loss: 10 # Max $10 loss per day (10% of capital)
-  max_weekly_loss: 20 # Max $20 loss per week
-  capital_drawdown_halt: 0.10 # STOP if 10% drawdown ($10 loss)
-
-  # Position limits
-  max_open_positions: 4 # Max 4 concurrent positions ($20 each = $80 max)
-  max_position_percentage: 0.20 # Max 20% of capital per position
-
-  # Circuit breakers
-  consecutive_failure_limit: 3 # Stop after 3 consecutive execution failures
-  pause_duration_minutes: 5 # Pause for 5 minutes after circuit breaker
-  api_latency_threshold: 2.0 # Reduce scan frequency if API > 2 seconds
-
-scanner:
-  # Scanning configuration for 15-minute crypto markets
-  scan_interval: 3 # Scan every 3 seconds (API-friendly)
-  max_concurrent_scans: 10 # Focused scanning on target markets
-
-  # TARGET MARKETS ONLY - 15-minute crypto predictions
-  target_markets:
-    - "BTC" # Bitcoin 15-min Up/Down
-    - "ETH" # Ethereum 15-min Up/Down
-    - "SOL" # Solana 15-min Up/Down
-
-  # Market filters for YES/NO arbitrage
-  market_keywords:
-    - "15 min"
-    - "15min"
-    - "15-min"
-    - "up or down"
-    - "higher or lower"
-
-  # Opportunity filters (strict for guaranteed profit)
-  min_liquidity: 100 # Minimum $100 liquidity (scaled for $100 capital)
-  min_combined_liquidity: 200 # Both YES and NO must have $100+ each
-  max_combined_price: 0.98 # YES + NO must be < $0.98 (2% min gross margin)
-  min_time_remaining: 120 # At least 2 minutes before resolution
-  max_spread: 0.03 # Maximum 3% spread per side
-
-notifications:
-  # Telegram settings
-  telegram:
-    enabled: true
-    bot_token: "${TELEGRAM_BOT_TOKEN}" # From environment
-    chat_id: "${TELEGRAM_CHAT_ID}" # From environment
-
-    # Alert thresholds
-    notify_on_opportunity: true
-    notify_on_trade: true
-    notify_on_profit: true
-    notify_on_loss: true
-    notify_on_circuit_breaker: true
-
-    # Quiet hours (optional)
-    quiet_hours:
-      enabled: false
-      start: "22:00"
-      end: "08:00"
-
-  # Email alerts (optional)
-  email:
-    enabled: false
-    smtp_server: "smtp.gmail.com"
-    smtp_port: 587
-    from_email: "your@email.com"
-    to_email: "alerts@email.com"
-    password: "${EMAIL_PASSWORD}"
-
-database:
-  # SQLite database path
-  path: "data/trades.db"
-
-  # Backup settings
-  backup_enabled: true
-  backup_interval_hours: 24
-  backup_path: "data/backups/"
-
-logging:
-  # Log levels: DEBUG, INFO, WARNING, ERROR, CRITICAL
-  level: "INFO"
-
-  # Log destinations
-  console: true
-  file: true
-  file_path: "logs/bot.log"
-
-  # Log rotation
-  max_bytes: 10485760 # 10MB
-  backup_count: 5
-
-execution:
-  # Execution settings
-  mode: "live" # Options: "dry_run", "live"
-  max_slippage: 0.01
-  order_timeout: 10
-  # Atomic execution for YES/NO arbitrage
-  atomic_execution: true # Both orders must succeed or abort
-  order_type: "limit" # POST-ONLY limit orders
-  time_in_force: "IOC" # Immediate-or-Cancel
-  order_timeout_seconds: 10 # 10 second timeout per order
-  max_execution_window: 10 # Both orders within 10 seconds
-
-  # Partial fill handling
-  min_fill_ratio: 0.80 # Accept if > 80% filled on both sides
-  cancel_on_partial: true # Cancel other side if one fails
-
-  # Retry logic
-  max_retries: 4
-  retry_delays: [1, 2, 4, 8] # Exponential backoff
-
-# DISABLED - Focus on pure YES/NO arbitrage only
-market_making:
-  enabled: false
-
-spread_capture:
-  enabled: false
-
-# YES/NO Arbitrage specific settings
-yes_no_arbitrage:
-  enabled: true
-  # Profitability calculation
-  include_platform_fee: true # Account for 2% winning side fee
-  include_gas: true # Account for Polygon gas
-  slippage_buffer: 0.005 # 0.5% slippage buffer
-
-  # Position sizing
-  size_by_liquidity: true # Don't exhaust orderbook (90% max)
-  size_by_profit: true # Scale with profit opportunity
-
-  # Priority scoring weights
-  profit_weight: 100 # Higher margin = higher priority
-  time_weight: 2 # More time remaining = higher priority
-  liquidity_weight: 0.01 # Higher liquidity = higher priority
-
 advanced:
-  # Focused on YES/NO arbitrage only
+  cache_market_data: true
+  cache_ttl_seconds: 2
   enable_hedging: false
   enable_market_making: false
   enable_multi_leg: false
-
-  # Performance optimization
-  cache_market_data: true
-  cache_ttl_seconds: 2 # Fresh data critical for arbitrage
-
-  # API rate limits
-  max_requests_per_second: 5 # Conservative to avoid rate limits
-  rate_limit_strategy: "adaptive"
-
-# Resolution monitoring
+  max_requests_per_second: 5
+  rate_limit_strategy: adaptive
+capital:
+  max_deployment_ratio: 0.8
+  max_single_position: 20
+  reserve_ratio: 0.2
+  total_capital: 100
+database:
+  backup_enabled: true
+  backup_interval_hours: 24
+  backup_path: data/backups/
+  path: data/trades.db
+execution:
+  atomic_execution: true
+  cancel_on_partial: true
+  max_execution_window: 10
+  max_retries: 4
+  max_slippage: 0.01
+  min_fill_ratio: 0.8
+  mode: live
+  order_timeout: 10
+  order_timeout_seconds: 10
+  order_type: limit
+  retry_delays:
+  - 1
+  - 2
+  - 4
+  - 8
+  time_in_force: IOC
+logging:
+  backup_count: 5
+  console: true
+  file: true
+  file_path: logs/bot.log
+  level: INFO
+  max_bytes: 10485760
+market_making:
+  enabled: false
+notifications:
+  email:
+    enabled: false
+    from_email: your@email.com
+    password: ${EMAIL_PASSWORD}
+    smtp_port: 587
+    smtp_server: smtp.gmail.com
+    to_email: alerts@email.com
+  telegram:
+    bot_token: ${TELEGRAM_BOT_TOKEN}
+    chat_id: ${TELEGRAM_CHAT_ID}
+    enabled: true
+    notify_on_circuit_breaker: true
+    notify_on_loss: true
+    notify_on_opportunity: true
+    notify_on_profit: true
+    notify_on_trade: true
+    quiet_hours:
+      enabled: false
+      end: 08:00
+      start: '22:00'
+polymarket:
+  api_endpoint: https://clob.polymarket.com
+  chain_id: 137
+  gas_estimate: 0.05
+  maker_fee: 0.0
+  max_position_size: 20
+  min_dollar_profit: 0.3
+  min_gross_margin: 0.025
+  min_net_margin: 0.015
+  min_profit_per_trade: 0.3
+  platform_fee: 0.02
+  slippage_tolerance: 0.005
+  taker_fee: 0.0
 resolution:
-  check_interval: 30 # Check resolution status every 30 seconds
-  verify_profit: true # Verify actual vs predicted profit
-  variance_alert_threshold: 0.02 # Alert if variance > 2%
-  auto_reinvest: true # Reinvest profits automatically
+  auto_reinvest: true
+  check_interval: 30
+  variance_alert_threshold: 0.02
+  verify_profit: true
+risk_management:
+  api_latency_threshold: 2.0
+  capital_drawdown_halt: 0.1
+  consecutive_failure_limit: 3
+  max_daily_loss: 10
+  max_open_positions: 4
+  max_position_percentage: 0.2
+  max_weekly_loss: 20
+  pause_duration_minutes: 5
+scanner:
+  market_keywords:
+  - 15 min
+  - 15min
+  - 15-min
+  - up or down
+  - higher or lower
+  max_combined_price: 0.98
+  max_concurrent_scans: 10
+  max_spread: 0.03
+  min_combined_liquidity: 200
+  min_liquidity: 100
+  min_time_remaining: 120
+  scan_interval: 3
+  target_markets:
+  - BTC
+  - ETH
+  - SOL
+spread_capture:
+  enabled: false
+yes_no_arbitrage:
+  enabled: true
+  include_gas: true
+  include_platform_fee: true
+  liquidity_weight: 0.01
+  profit_weight: 100
+  size_by_liquidity: true
+  size_by_profit: true
+  slippage_buffer: 0.005
+  time_weight: 2

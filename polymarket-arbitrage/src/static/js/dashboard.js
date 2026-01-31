@@ -32,7 +32,37 @@
             const messagesDiv = document.getElementById('chat-messages');
             const messageDiv = document.createElement('div');
             messageDiv.className = `chat-message ${sender}`;
-            messageDiv.innerHTML = sender === 'user' ? text : marked.parse(text);
+            
+            if (sender === "user") {
+              // User messages: escape HTML to prevent XSS
+              messageDiv.textContent = text;
+            } else {
+              // Bot messages: parse markdown but sanitize HTML
+              // Configure marked to sanitize output
+              const sanitizedHtml = DOMPurify.sanitize(marked.parse(text), {
+                ALLOWED_TAGS: [
+                  "p",
+                  "br",
+                  "strong",
+                  "em",
+                  "code",
+                  "pre",
+                  "ul",
+                  "ol",
+                  "li",
+                  "h1",
+                  "h2",
+                  "h3",
+                  "h4",
+                  "a",
+                  "blockquote",
+                ],
+                ALLOWED_ATTR: ["href", "target"],
+                ALLOW_DATA_ATTR: false,
+              });
+              messageDiv.innerHTML = sanitizedHtml;
+            }
+            
             messagesDiv.appendChild(messageDiv);
             messagesDiv.scrollTop = messagesDiv.scrollHeight;
         }

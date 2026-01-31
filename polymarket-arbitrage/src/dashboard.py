@@ -5,38 +5,122 @@ Real-time monitoring interface with WebSocket support
 """
 
 import json
+import logging
 import os
+import secrets
 import sqlite3
 import sys
 import threading
 import time
 from datetime import datetime, timedelta
+from functools import wraps
 from pathlib import Path
 
 import plotly
 import plotly.graph_objs as go
 import yaml
-from flask import Flask, jsonify, render_template
+from flask import Flask, jsonify, render_template, request, session
 from flask_socketio import SocketIO, emit
 
 # Add parent directory to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+# Use absolute paths based on project root
+PROJECT_ROOT = Path(__file__).parent.parent.resolve()
+DB_PATH = PROJECT_ROOT / "data" / "trades.db"
+LOG_PATH = PROJECT_ROOT / "logs" / "bot.log"
+CONFIG_PATH = PROJECT_ROOT / "config" / "config.yaml"
+AUDIT_LOG_PATH = PROJECT_ROOT / "logs" / "audit.log"
+PID_FILE = PROJECT_ROOT / ".bot.pid"
+
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'polymarket-arbitrage-secret'
+app.config['SECRET_KEY'] = os.environ.get('DASHBOARD_SECRET_KEY', secrets.token_hex(32))
 app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0  # Disable caching
 
 # Initialize SocketIO
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading')
 
-# Database path
-DB_PATH = "data/trades.db"
-LOG_PATH = "logs/bot.log"
+# Setup audit logging
+audit_logger = logging.getLogger('audit')
+audit_handler = logging.FileHandler(AUDIT_LOG_PATH)
+audit_handler.setFormatter(logging.Formatter('%(asctime)s - %(message)s'))
+audit_logger.addHandler(audit_handler)
+audit_logger.setLevel(logging.INFO)
+
+
+def audit_log(action: str, details: str = "", success: bool = True):
+    """Log critical actions for audit trail"""
+    client_ip = request.remote_addr if request else "system"
+    status = "SUCCESS" if success else "FAILED"
+    audit_logger.info(f"[{status}] {action} | IP: {client_ip} | {details}")
+
+
+def require_local_access(f):
+    """Decorator to restrict endpoints to localhost only"""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        allowed_ips = ['127.0.0.1', 'localhost', '::1']
+        client_ip = request.remote_addr
+        if client_ip not in allowed_ips:
+            audit_log(f"UNAUTHORIZED_ACCESS:{f.__name__}", f"Blocked IP: {client_ip}", success=False)
+            return jsonify({'success': False, 'error': 'Access denied: localhost only'}), 403
+        return f(*args, **kwargs)
+    return decorated_function
+
+
+def validate_settings(settings: dict) -> tuple[bool, str]:
+    """
+    Validate settings before saving to config.
+    Returns (is_valid, error_message)
+    """
+    # Define allowed fields and their validation rules
+    validators = {
+        'execution': {
+            'mode': lambda v: v in ['live', 'dry_run'],
+            'max_slippage': lambda v: isinstance(v, (int, float)) and 0 <= v <= 0.1,
+            'order_timeout': lambda v: isinstance(v, int) and 1 <= v <= 60,
+            'max_retries': lambda v: isinstance(v, int) and 0 <= v <= 10,
+        },
+        'polymarket': {
+            'max_position_size': lambda v: isinstance(v, (int, float)) and 0 < v <= 1000,
+            'min_gross_margin': lambda v: isinstance(v, (int, float)) and 0 < v <= 0.5,
+            'min_net_margin': lambda v: isinstance(v, (int, float)) and 0 < v <= 0.5,
+            'min_dollar_profit': lambda v: isinstance(v, (int, float)) and 0 < v <= 100,
+            'slippage_tolerance': lambda v: isinstance(v, (int, float)) and 0 <= v <= 0.1,
+        },
+        'scanner': {
+            'scan_interval': lambda v: isinstance(v, int) and 1 <= v <= 60,
+            'min_liquidity': lambda v: isinstance(v, (int, float)) and v >= 0,
+            'max_spread': lambda v: isinstance(v, (int, float)) and 0 < v <= 0.2,
+        },
+        'capital': {
+            'total_capital': lambda v: isinstance(v, (int, float)) and v > 0,
+            'max_single_position': lambda v: isinstance(v, (int, float)) and v > 0,
+        },
+        'risk_management': {
+            'max_daily_loss': lambda v: isinstance(v, (int, float)) and v > 0,
+            'max_open_positions': lambda v: isinstance(v, int) and v > 0,
+        }
+    }
+    
+    for section, fields in settings.items():
+        if section not in validators:
+            return False, f"Unknown config section: {section}"
+        
+        if not isinstance(fields, dict):
+            return False, f"Invalid format for section: {section}"
+        
+        for field, value in fields.items():
+            if field in validators[section]:
+                if not validators[section][field](value):
+                    return False, f"Invalid value for {section}.{field}: {value}"
+    
+    return True, ""
 
 
 def get_db_connection():
     """Get database connection"""
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(str(DB_PATH))
     conn.row_factory = sqlite3.Row
     return conn
 
@@ -62,8 +146,8 @@ def api_status():
             is_running = bool(result.stdout.strip())
         except:
             # Fallback to log file check
-            if os.path.exists(LOG_PATH):
-                log_age = datetime.now() - datetime.fromtimestamp(os.path.getmtime(LOG_PATH))
+            if LOG_PATH.exists():
+                log_age = datetime.now() - datetime.fromtimestamp(os.path.getmtime(str(LOG_PATH)))
                 is_running = log_age.total_seconds() < 300  # Updated in last 5 minutes
             else:
                 is_running = False
@@ -223,11 +307,11 @@ def api_logs():
     try:
         lines = int(request.args.get('lines', 100))
         
-        if not os.path.exists(LOG_PATH):
+        if not LOG_PATH.exists():
             return jsonify([])
         
         # Read last N lines
-        with open(LOG_PATH, 'r') as f:
+        with open(str(LOG_PATH), 'r') as f:
             log_lines = f.readlines()
         
         recent_lines = log_lines[-lines:]
@@ -303,32 +387,40 @@ BOT_SCRIPT = 'src/arbitrage_bot.py'
 
 
 @app.route('/api/bot/start', methods=['POST'])
+@require_local_access
 def api_bot_start():
     """Start the arbitrage bot"""
     global BOT_PROCESS, BOT_STATUS
     
     try:
-        # Check if already running
-        result = subprocess.run(
-            ['pgrep', '-f', 'arbitrage_bot.py'],
-            capture_output=True,
-            text=True
-        )
-        if result.stdout.strip():
-            return jsonify({
-                'success': False,
-                'error': 'Bot is already running',
-                'status': 'running'
-            })
+        # Check if already running via PID file
+        if PID_FILE.exists():
+            try:
+                pid = int(PID_FILE.read_text().strip())
+                os.kill(pid, 0)  # Check if process exists
+                audit_log("BOT_START", "Bot already running", success=False)
+                return jsonify({
+                    'success': False,
+                    'error': 'Bot is already running',
+                    'status': 'running'
+                })
+            except (ProcessLookupError, ValueError):
+                PID_FILE.unlink()  # Stale PID file
         
         # Start the bot in background
         BOT_PROCESS = subprocess.Popen(
             ['python3', BOT_SCRIPT],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-            start_new_session=True
+            start_new_session=True,
+            cwd=str(PROJECT_ROOT)
         )
         BOT_STATUS = 'running'
+        
+        # Write PID file
+        PID_FILE.write_text(str(BOT_PROCESS.pid))
+        
+        audit_log("BOT_START", f"PID: {BOT_PROCESS.pid}")
         
         return jsonify({
             'success': True,
@@ -338,28 +430,45 @@ def api_bot_start():
         })
         
     except Exception as e:
+        audit_log("BOT_START", str(e), success=False)
         return jsonify({
             'success': False,
-            'error': str(e),
+            'error': 'Failed to start bot',
             'status': BOT_STATUS
         }), 500
 
 
 @app.route('/api/bot/stop', methods=['POST'])
+@require_local_access
 def api_bot_stop():
     """Stop the arbitrage bot"""
     global BOT_PROCESS, BOT_STATUS
     
     try:
-        # Find and kill the bot process
-        result = subprocess.run(
-            ['pkill', '-f', 'arbitrage_bot.py'],
-            capture_output=True,
-            text=True
-        )
+        pid = None
+        # Try to stop via PID file first (safer)
+        if PID_FILE.exists():
+            try:
+                pid = int(PID_FILE.read_text().strip())
+                os.kill(pid, 15)  # SIGTERM
+                PID_FILE.unlink()
+            except (ProcessLookupError, ValueError):
+                pass  # Process already dead or invalid PID
+        else:
+            # Fallback to pkill only if no PID file
+            result = subprocess.run(
+                ['pgrep', '-f', 'arbitrage_bot.py'],
+                capture_output=True,
+                text=True
+            )
+            if result.stdout.strip():
+                pid = result.stdout.strip().split()[0]
+                os.kill(int(pid), 15)
         
         BOT_PROCESS = None
         BOT_STATUS = 'stopped'
+        
+        audit_log("BOT_STOP", f"PID: {pid}")
         
         return jsonify({
             'success': True,
@@ -368,28 +477,32 @@ def api_bot_stop():
         })
         
     except Exception as e:
+        audit_log("BOT_STOP", str(e), success=False)
         return jsonify({
             'success': False,
-            'error': str(e),
+            'error': 'Failed to stop bot',
             'status': BOT_STATUS
         }), 500
 
 
 @app.route('/api/bot/pause', methods=['POST'])
+@require_local_access
 def api_bot_pause():
     """Pause the arbitrage bot (send SIGUSR1)"""
     global BOT_STATUS
     
     try:
-        # Find bot PID and send pause signal
-        result = subprocess.run(
-            ['pgrep', '-f', 'arbitrage_bot.py'],
-            capture_output=True,
-            text=True
-        )
+        pid = None
+        # Try PID file first
+        if PID_FILE.exists():
+            try:
+                pid = int(PID_FILE.read_text().strip())
+                os.kill(pid, 0)  # Check if exists
+            except (ProcessLookupError, ValueError):
+                pid = None
         
-        pid = result.stdout.strip()
         if not pid:
+            audit_log("BOT_PAUSE", "Bot not running", success=False)
             return jsonify({
                 'success': False,
                 'error': 'Bot is not running',
@@ -397,8 +510,10 @@ def api_bot_pause():
             })
         
         # Send SIGUSR1 to pause (bot needs to handle this)
-        os.kill(int(pid.split()[0]), signal.SIGUSR1)
+        os.kill(pid, signal.SIGUSR1)
         BOT_STATUS = 'paused'
+        
+        audit_log("BOT_PAUSE", f"PID: {pid}")
         
         return jsonify({
             'success': True,
@@ -407,27 +522,30 @@ def api_bot_pause():
         })
         
     except Exception as e:
+        audit_log("BOT_PAUSE", str(e), success=False)
         return jsonify({
             'success': False,
-            'error': str(e),
+            'error': 'Failed to pause bot',
             'status': BOT_STATUS
         }), 500
 
 
 @app.route('/api/bot/restart', methods=['POST'])
+@require_local_access
 def api_bot_restart():
     """Restart the arbitrage bot"""
     global BOT_PROCESS, BOT_STATUS
     
     try:
-        # Stop first
-        subprocess.run(
-            ['pkill', '-f', 'arbitrage_bot.py'],
-            capture_output=True,
-            text=True
-        )
+        # Stop first via PID file
+        if PID_FILE.exists():
+            try:
+                pid = int(PID_FILE.read_text().strip())
+                os.kill(pid, 15)  # SIGTERM
+                PID_FILE.unlink()
+            except (ProcessLookupError, ValueError):
+                pass
         
-        import time
         time.sleep(1)  # Wait for process to terminate
         
         # Start again
@@ -435,9 +553,15 @@ def api_bot_restart():
             ['python3', BOT_SCRIPT],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-            start_new_session=True
+            start_new_session=True,
+            cwd=str(PROJECT_ROOT)
         )
         BOT_STATUS = 'running'
+        
+        # Write new PID file
+        PID_FILE.write_text(str(BOT_PROCESS.pid))
+        
+        audit_log("BOT_RESTART", f"New PID: {BOT_PROCESS.pid}")
         
         return jsonify({
             'success': True,
@@ -447,9 +571,10 @@ def api_bot_restart():
         })
         
     except Exception as e:
+        audit_log("BOT_RESTART", str(e), success=False)
         return jsonify({
             'success': False,
-            'error': str(e),
+            'error': 'Failed to restart bot',
             'status': BOT_STATUS
         }), 500
 
@@ -664,48 +789,59 @@ def broadcast_updates():
             print(f"Broadcast error: {e}")
 
 
-# Configuration API
-CONFIG_PATH = "config/config.yaml"
-
-
 @app.route('/api/config', methods=['GET'])
+@require_local_access
 def api_get_config():
     """Get current configuration"""
     try:
-        with open(CONFIG_PATH, 'r') as f:
+        with open(str(CONFIG_PATH), 'r') as f:
             config = yaml.safe_load(f)
         return jsonify(config)
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': 'Failed to load configuration'}), 500
 
 
 @app.route('/api/config', methods=['POST'])
+@require_local_access
 def api_update_config():
     """Update configuration"""
     try:
-        from flask import request
         new_config = request.json
         
+        if not new_config:
+            return jsonify({'success': False, 'error': 'No configuration provided'}), 400
+        
+        # Validate settings before saving
+        is_valid, error_msg = validate_settings(new_config)
+        if not is_valid:
+            audit_log("CONFIG_UPDATE", f"Validation failed: {error_msg}", success=False)
+            return jsonify({'success': False, 'error': error_msg}), 400
+        
         # Load current config
-        with open(CONFIG_PATH, 'r') as f:
+        with open(str(CONFIG_PATH), 'r') as f:
             config = yaml.safe_load(f)
         
         # Update only allowed fields
-        allowed_fields = ['polymarket', 'capital', 'risk_management', 'scanner']
+        allowed_fields = ['polymarket', 'capital', 'risk_management', 'scanner', 'execution']
+        changes = []
         for field in allowed_fields:
             if field in new_config:
                 if field in config:
                     config[field].update(new_config[field])
                 else:
                     config[field] = new_config[field]
+                changes.append(field)
         
         # Save updated config
-        with open(CONFIG_PATH, 'w') as f:
+        with open(str(CONFIG_PATH), 'w') as f:
             yaml.dump(config, f, default_flow_style=False)
+        
+        audit_log("CONFIG_UPDATE", f"Updated sections: {', '.join(changes)}")
         
         return jsonify({'success': True, 'message': 'Configuration updated'})
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        audit_log("CONFIG_UPDATE", str(e), success=False)
+        return jsonify({'success': False, 'error': 'Failed to update configuration'}), 500
 
 
 @app.route('/api/markets', methods=['GET'])
@@ -805,78 +941,82 @@ def api_analytics():
         return jsonify({'error': str(e)}), 500
 
 
-# Bot Control Endpoints
+# Bot Control Endpoints (legacy - redirect to /api/bot/* endpoints)
 @app.route('/api/control/start', methods=['POST'])
+@require_local_access
 def api_control_start():
     """Start the bot"""
-    try:
-        # In a production system, this would send a signal to the bot process
-        # For now, return success (bot must be started manually via script)
-        return jsonify({'success': False, 'error': 'Please use ./start_all.sh to start the bot'})
-    except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+    return api_bot_start()
 
 
 @app.route('/api/control/stop', methods=['POST'])
+@require_local_access
 def api_control_stop():
     """Stop the bot"""
-    try:
-        import subprocess
-        result = subprocess.run(['pkill', '-f', 'arbitrage_bot.py'], capture_output=True)
-        return jsonify({'success': True, 'message': 'Bot stopped'})
-    except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+    return api_bot_stop()
 
 
 @app.route('/api/control/pause', methods=['POST'])
+@require_local_access
 def api_control_pause():
     """Pause/Resume the bot"""
-    try:
-        # This would need to be implemented in the bot with a pause mechanism
-        return jsonify({'success': False, 'error': 'Pause functionality not yet implemented'})
-    except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+    return api_bot_pause()
 
 
 # Settings Endpoints
 @app.route('/api/settings', methods=['GET'])
+@require_local_access
 def api_get_settings():
     """Get current settings"""
     try:
-        import yaml
-        with open('../config/config.yaml') as f:
+        with open(str(CONFIG_PATH)) as f:
             config = yaml.safe_load(f)
         return jsonify(config)
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': 'Failed to load settings'}), 500
 
 
 @app.route('/api/settings', methods=['POST'])
+@require_local_access
 def api_save_settings():
     """Save settings"""
     try:
-        import yaml
         settings = request.get_json()
+        
+        if not settings:
+            return jsonify({'success': False, 'error': 'No settings provided'}), 400
+        
+        # Validate settings before saving
+        is_valid, error_msg = validate_settings(settings)
+        if not is_valid:
+            audit_log("SETTINGS_SAVE", f"Validation failed: {error_msg}", success=False)
+            return jsonify({'success': False, 'error': error_msg}), 400
 
         # Load current config
-        with open('../config/config.yaml') as f:
+        with open(str(CONFIG_PATH)) as f:
             config = yaml.safe_load(f)
 
-        # Update specific fields
-        if 'execution' in settings:
-            config['execution'].update(settings['execution'])
-        if 'polymarket' in settings:
-            config['polymarket'].update(settings['polymarket'])
-        if 'scanner' in settings:
-            config['scanner'].update(settings['scanner'])
+        # Update specific fields (allowlisted only)
+        allowed_sections = ['execution', 'polymarket', 'scanner', 'capital', 'risk_management']
+        changes = []
+        for section in allowed_sections:
+            if section in settings:
+                if section in config:
+                    config[section].update(settings[section])
+                else:
+                    config[section] = settings[section]
+                changes.append(section)
 
         # Save back to file
-        with open('../config/config.yaml', 'w') as f:
+        with open(str(CONFIG_PATH), 'w') as f:
             yaml.dump(config, f, default_flow_style=False)
 
+        audit_log("SETTINGS_SAVE", f"Updated sections: {', '.join(changes)}")
+        
         return jsonify({'success': True, 'message': 'Settings saved'})
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        audit_log("SETTINGS_SAVE", str(e), success=False)
+        return jsonify({'success': False, 'error': 'Failed to save settings'}), 500
 
 
 if __name__ == '__main__':
