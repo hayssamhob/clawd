@@ -1,0 +1,25 @@
+{
+  "name": "windsurf-mcp",
+  "version": "1.0.0",
+  "description": "MCP server for OpenClaw to control Windsurf IDE",
+  "type": "module",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "tsc --watch"
+  },
+  "keywords": ["mcp", "windsurf", "openclaw", "ide"],
+  "author": "OpenClaw",
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "ws": "^8.18.0",
+    "node-fetch": "^3.3.2"
+  },
+  "devDependencies": {
+    "@types/ws": "^8.5.13",
+    "@types/node": "^20.0.0",
+    "typescript": "^5.3.0"
+  }
+}
