@@ -31,35 +31,51 @@ Things like:
 - **Coding CLI:** Use `codex` or `opencode` when available (Windsurf preferred)
 - **Web Search:** Brave API (already configured)
 
-## Windsurf Workflow
+## Windsurf Workflow - FULLY AUTOMATED 🤖
 
 **Token Preservation Rule:** If coding task > 20 lines, ALWAYS use Windsurf.
 
-**Default Models (Priority Order):**
-1. **SWE-1.5** - PRIMARY (FREE, near-frontier, promo for 3 months)
-2. **DeepSeek V3** - BACKUP (FREE, strong for coding)
-3. **GPT-5.1-Codex** - CODE SPECIALIST (FREE)
-4. **Kimi K2.5** - NEW OPTION (FREE, promo)
+### Autonomous Model Selection System
+**Location:** `~/.nvm/versions/node/v22.12.0/lib/node_modules/openclaw/skills/windsurf-automation/selector.cjs`
 
-**Cheap Upgrades (< 1 credit):**
-- **Grok-3 mini (Thinking)** - 0.125x (CHEAPEST reasoning!)
-- **GLM 4.7** - 0.25x (beta, very cheap)
-- **SWE-1.5 (Fast)** - 0.5x (speed upgrade, promo)
+**Usage (Internal):**
+```bash
+node selector.cjs "task description"  # Analyzes and selects optimal model
+node selector.cjs --usage              # Check credit usage
+```
 
-**Mid-Tier (Inform Hayssam First):**
-- **Claude Haiku 4.5** - 1x (balanced option)
-- **Claude Sonnet 4.5** - 2x (promo pricing, latest)
+**Task Classification (Automatic):**
+- **Quick** → Fast Arena (FREE) - Simple fixes, bugs, typos
+- **Daily** → Hybrid Arena (FREE) - Standard features, implementations
+- **Complex** → Claude Sonnet 4.5 (2x) or Frontier Arena - Architecture, algorithms
+- **Emergency** → Claude Opus 4.5 (4x) - Production issues, security
 
-**Emergency Only (Ask Permission):**
-- **Claude Opus 4.5** - 4x (complex architecture)
-- ⚠️ **AVOID Claude Opus 4.1** - 20x (way too expensive!)
+**Budget Tracking:**
+- Monthly: 500 credits
+- Warning: 400 credits (80%)
+- Daily limit: 50 credits
+- Usage tracked in: `~/clawd/memory/windsurf-usage.json`
 
-**📖 Full Benchmark:** See `WINDSURF_MODELS_FINAL.md` for all 82 models
+**Model Priority (Auto-Selected):**
+1. **FREE Models (95% of tasks):**
+   - Hybrid Arena (daily work)
+   - Fast Arena (quick tasks)
+   - Frontier Arena (complex, budget-conscious)
+   - SWE-1.5, DeepSeek V3, GPT-5.1-Codex
+
+2. **Cheap Reasoning (< 1 credit):**
+   - Grok-3 mini (Thinking) - 0.125x
+   - GLM 4.7 - 0.25x
+   - SWE-1.5 Fast - 0.5x
+
+3. **Premium (Auto-approved if within budget):**
+   - Claude Sonnet 4.5 - 2x (complex work)
+   - Claude Opus 4.5 - 4x (emergencies only)
 
 **Modes:**
-- `--mode agent` → Full autonomous coding (default for features)
-- `--mode edit` → Targeted changes (refactoring, bug fixes)
-- `--mode ask` → Code review, questions (read-only)
+- `cascade --mode agent` → Full autonomous coding
+- `cascade --mode edit` → Targeted changes
+- `cascade --arena "Frontier"` → Arena category selection
 
 ## Examples
 

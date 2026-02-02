@@ -1,0 +1,32 @@
+# Process IDs
+*.pid
+
+# Logs (keep structure, ignore content changes)
+*.log
+
+# Temporary files
+*.tmp
+*.temp
+.DS_Store
+
+# Node modules (if any)
+node_modules/
+
+# Environment variables
+.env
+.env.local
+
+# Build artifacts
+dist/
+build/
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Usage tracking (local only)
+memory/windsurf-usage.json
+memory/heartbeat-state.json
