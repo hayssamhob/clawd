@@ -172,7 +172,7 @@ You are free to edit `HEARTBEAT.md` with a short checklist or reminders. Keep it
 - Read and organize memory files
 - Check on projects (git status, etc.)
 - Update documentation
-- Commit and push your own changes
+- **Commit and push your own changes** (see Git section below)
 - **Review and update MEMORY.md** (see below)
 
 ### 🔄 Memory Maintenance (During Heartbeats)
@@ -185,6 +185,111 @@ Periodically (every few days), use a heartbeat to:
 Think of it like a human reviewing their journal and updating their mental model. Daily files are raw notes; MEMORY.md is curated wisdom.
 
 The goal: Be helpful without being annoying. Check in a few times a day, do useful background work, but respect quiet time.
+
+## 🔧 Git Workflow - Autonomous Commits
+
+**You are authorized to commit your own work autonomously.** Follow these rules:
+
+### When to Commit
+
+✅ **Commit freely when:**
+- Completing a feature or improvement
+- Finishing documentation updates
+- After successful tests pass
+- End of work session (overnight builds)
+- Making configuration improvements
+- Fixing bugs you discovered
+
+❌ **Ask first when:**
+- Making breaking changes
+- Modifying critical production code
+- Unsure about the changes
+- Committing someone else's work
+
+### Branching Strategy
+
+**Use feature branches for:**
+- Complex features (multi-session work)
+- Experimental changes
+- Risky refactoring
+
+**Commit directly to main for:**
+- Documentation updates
+- Small improvements
+- Bug fixes (< 30 min)
+- Configuration tweaks
+- Your own autonomous work
+
+### Commit Message Format
+
+Follow conventional commits:
+```
+type(scope): short description
+
+Detailed explanation of what and why.
+
+Technical notes if relevant.
+```
+
+**Types:** feat, fix, docs, refactor, test, chore
+
+**Good commit examples:**
+```
+feat(windsurf): Add autonomous model selection system
+
+Implements intelligent model selection based on task complexity
+with budget tracking and Arena category optimization.
+
+Technical: selector.cjs, test suite, 100% pass rate
+```
+
+```
+docs: Update Git workflow guides
+
+Added GIT_WORKFLOW.md and COMMIT_AUTOMATION.md for autonomous
+commit management with best practices and templates.
+```
+
+```
+fix(auth): Resolve token expiry edge case
+
+Fixed timezone calculation causing premature token expiration.
+```
+
+### Daily Routine
+
+**End of day / overnight:**
+```bash
+git status                    # Check what changed
+git add <relevant-files>      # Stage specific files
+git commit -m "message"       # Descriptive commit
+git push origin main          # Backup to remote
+```
+
+**After completing feature:**
+```bash
+git checkout -b feature/name  # Create branch if complex
+# ... work ...
+git commit -m "feat: ..."     # Commit progress
+git checkout main             # Switch to main
+git merge feature/name --no-ff  # Clean merge
+git branch -d feature/name    # Delete branch
+```
+
+### Reference Guides
+
+- **`GIT_WORKFLOW.md`** - Complete workflow guide with examples
+- **`COMMIT_AUTOMATION.md`** - Autonomous commit rules and templates
+- **`.gitignore`** - What not to commit (logs, PIDs, secrets)
+
+### Key Rules
+
+1. **Commit regularly** - Don't let work pile up
+2. **Descriptive messages** - Explain what and why
+3. **Feature branches** for complex work
+4. **Test before commit** - Ensure code works
+5. **No junk files** - Respect .gitignore
+6. **Document context** - Future-you will thank you
 
 ## Make It Yours
 
