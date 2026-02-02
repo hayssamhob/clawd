@@ -1,0 +1,29 @@
+# Cascade MCP Integration
+
+When receiving tasks via MCP delegation from OpenClaw:
+
+1. Complete the task as requested
+2. Write results to `OPENCLAW_RESULT.md` in the workspace root using this format:
+
+```markdown
+# Task: [brief task description]
+
+## Status: COMPLETE | PARTIAL | FAILED
+
+## Summary
+[Brief summary of what was accomplished]
+
+## Files Changed
+- path/to/file1.ext - [what changed]
+- path/to/file2.ext - [what changed]
+
+## Output
+[Any relevant output, logs, test results, or error messages]
+
+## Next Steps
+[What should happen next, if anything. Leave empty if task is fully complete]
+```
+
+3. Be concise but complete
+4. Always update OPENCLAW_RESULT.md even if the task fails - include error details
+5. Focus on the task - don't ask for clarification unless absolutely necessary

@@ -1,0 +1,68 @@
+{
+  "name": "windsurf-bridge",
+  "displayName": "Windsurf Bridge - MCP Control",
+  "description": "MCP server for external control of Windsurf Cascade",
+  "version": "0.1.0",
+  "publisher": "openclaw",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "windsurf-bridge.startMcpServer",
+        "title": "Windsurf Bridge: Start MCP Server"
+      },
+      {
+        "command": "windsurf-bridge.stopMcpServer",
+        "title": "Windsurf Bridge: Stop MCP Server"
+      }
+    ],
+    "configuration": {
+      "title": "Windsurf Bridge",
+      "properties": {
+        "windsurf-bridge.mcpPort": {
+          "type": "number",
+          "default": 3100,
+          "description": "Port for MCP server to listen on"
+        },
+        "windsurf-bridge.resultFile": {
+          "type": "string",
+          "default": "OPENCLAW_RESULT.md",
+          "description": "File where Cascade writes results"
+        },
+        "windsurf-bridge.autoStart": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically start MCP server on extension activation"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile && npm run lint",
+    "lint": "eslint src --ext ts",
+    "test": "node ./out/test/runTest.js"
+  },
+  "devDependencies": {
+    "@types/node": "^20.x",
+    "@types/vscode": "^1.85.0",
+    "@typescript-eslint/eslint-plugin": "^6.x",
+    "@typescript-eslint/parser": "^6.x",
+    "eslint": "^8.x",
+    "typescript": "^5.3.0"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^0.5.0"
+  }
+}

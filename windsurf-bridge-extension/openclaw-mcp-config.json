@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "windsurf-bridge": {
+      "command": "nc",
+      "args": ["localhost", "3100"],
+      "env": {},
+      "description": "Windsurf Cascade control via MCP - delegates coding tasks to Windsurf AI"
+    }
+  }
+}
