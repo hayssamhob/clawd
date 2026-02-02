@@ -179,7 +179,7 @@ class ArbitrageBot:
         self.logger.info("🚀 Starting Polymarket Arbitrage Bot")
         
         # Check balance before starting
-        balance_info = self.polymarket.get_balance()
+        balance_info = self.client.get_balance()
         self.logger.info(f"💰 Current Balance: ${balance_info.get('balance', 0):.2f} USDC")
         self.logger.info(f"   Available: ${balance_info.get('available', 0):.2f} USDC")
 

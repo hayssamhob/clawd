@@ -40,22 +40,34 @@ class PolymarketClient:
         self.config = config
         
         # Initialize client
-        if api_key and api_secret and private_key and ClobClient and ApiCreds:
+        if private_key and ClobClient and ApiCreds:
             try:
-                # Create API credentials
-                creds = ApiCreds(
-                    api_key=api_key,
-                    api_secret=api_secret,
-                    api_passphrase=""  # Polymarket doesn't use passphrase
+                # Initialize temporary client to derive API credentials
+                temp_client = ClobClient(
+                    host=config.get('api_endpoint', 'https://clob.polymarket.com'),
+                    key=private_key,
+                    chain_id=config.get('chain_id', 137)
                 )
                 
-                # Initialize client with private key and credentials
+                # Derive fresh API credentials from private key
+                creds = temp_client.derive_api_key()
+                self.logger.info(f"✅ Derived API credentials: {creds.api_key[:10]}...")
+                
+                # Get wallet address from private key
+                from eth_account import Account
+                account = Account.from_key(private_key)
+                wallet_address = account.address
+                
+                # Initialize main client
                 self.client = ClobClient(
                     host=config.get('api_endpoint', 'https://clob.polymarket.com'),
                     key=private_key,  # Private key for signing
-                    creds=creds,       # API credentials
-                    chain_id=config.get('chain_id', 137)  # Polygon mainnet
+                    chain_id=config.get('chain_id', 137),  # Polygon mainnet
+                    signature_type=0,  # EOA (Externally Owned Account)
+                    funder=wallet_address  # Your wallet address
                 )
+                # Set derived API credentials
+                self.client.set_api_creds(creds)
                 self.private_key = private_key
                 self.simulation_mode = False
                 self.logger.info("✅ Polymarket client initialized (Level 2 - Full Access)")
@@ -101,8 +113,13 @@ class PolymarketClient:
             self._rate_limit()
 
             # Get balance from Polymarket API
-            # The ClobClient has a method to get balance
-            balance_response = self.client.get_balance_allowance()
+            from py_clob_client.clob_types import (AssetType,
+                                                   BalanceAllowanceParams)
+
+            # py_clob_client assumes params is not None (it reads params.signature_type internally)
+            # and expects asset_type to be the AssetType enum.
+            params = BalanceAllowanceParams(asset_type=AssetType.COLLATERAL, signature_type=0)
+            balance_response = self.client.get_balance_allowance(params)
 
             # Parse response - typically returns balance in smallest unit (6 decimals for USDC)
             if isinstance(balance_response, dict):
