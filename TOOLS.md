@@ -2,6 +2,24 @@
 
 Skills define *how* tools work. This file is for *your* specifics — the stuff that's unique to your setup.
 
+## ⚠️ CRITICAL: Token Preservation Policy
+
+**USE EXCLUSIVELY WINDSURF FOR ALL CODING TASKS - NO EXCEPTIONS**
+
+**ABSOLUTE RULES:**
+- ✅ **WINDSURF ONLY** - All coding, scripts, debugging, refactoring
+- ❌ **NEVER Claude Code, Codex, OpenCode, Pi, or any other tool**
+- ❌ **NEVER write code directly with Claude Sonnet tokens**
+- ✅ Use Windsurf via: `node /path/to/windsurf-execute.cjs "task"`
+
+**Why:** Claude Sonnet tokens are for conversation. Coding burns them fast. Windsurf has dedicated credits (500/month).
+
+- ✅ **Windsurf** → All coding, refactoring, debugging (any code changes)
+- ✅ **Claude Sonnet** → Conversation, planning, research, non-coding tasks only
+- ❌ **Direct coding via Claude** → FORBIDDEN (locks Hayssam out of conversation)
+
+**Rule:** If you're about to write/edit code directly, STOP and use Windsurf instead.
+
 ## What Goes Here
 
 Things like:
