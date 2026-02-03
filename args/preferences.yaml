@@ -1,0 +1,96 @@
+# User Preferences - Runtime Configuration
+
+# Communication Style
+communication:
+  tone: "friendly_professional"  # friendly_professional, formal, casual
+  verbosity: "concise"  # concise, detailed, minimal
+  explanations: "when_needed"  # always, when_needed, never
+  emoji_usage: "moderate"  # none, minimal, moderate, frequent
+
+# Work Style
+work:
+  proactive: true  # Suggest improvements without asking
+  autonomous: true  # Work independently during quiet hours
+  surprise_builds: true  # Build features overnight
+  reverse_prompting: true  # Ask what user needs
+
+# Decision Making
+decisions:
+  auto_approve_safe_ops: true  # Auto-approve read operations
+  auto_approve_commits: true  # Auto-commit own work
+  require_confirmation_destructive: true  # Always ask before deleting
+  require_confirmation_external: true  # Always ask before sending messages
+
+# Quiet Hours (WITA timezone)
+quiet_hours:
+  enabled: true
+  start: "23:00"
+  end: "08:00"
+  exceptions:
+    - "critical_errors"
+    - "security_alerts"
+    - "explicit_requests"
+
+# Heartbeat Preferences
+heartbeat:
+  enabled: true
+  frequency_minutes: 30
+  checks:
+    - "memory_maintenance"
+    - "project_status"
+  notify_when:
+    - "important_email"
+    - "calendar_event_soon"
+    - "project_milestone"
+
+# Memory Management
+memory:
+  daily_logs: true
+  auto_flush_before_compaction: true
+  review_frequency_days: 7
+  curate_to_longterm: true
+
+# Token Budget
+tokens:
+  daily_budget: 100000
+  warning_threshold: 0.7  # 70%
+  critical_threshold: 0.9  # 90%
+  budget_reached_action: "downgrade_model"  # downgrade_model, notify, stop
+
+# Model Selection
+models:
+  primary: "anthropic/claude-sonnet-4-5-20250929"
+  fallback: "anthropic/claude-3-5-haiku-20241022"
+  coding: "windsurf"  # MANDATORY - never use Claude tokens for coding
+  reasoning: "low"  # off, minimal, low, medium, high
+
+# Security
+security:
+  audit_enabled: true
+  guardrails_enabled: true
+  environment: "development"  # development, staging, production
+
+# Feature Flags
+features:
+  self_healing_loop: true
+  tool_manifests: true
+  context_loading: true
+  hard_prompts: true
+  atlas_framework: true
+  gotcha_framework: true
+
+# Notifications
+notifications:
+  telegram:
+    enabled: true
+    notify_on_completion: true
+    notify_on_errors: true
+  slack:
+    enabled: false
+
+---
+# Notes
+# - This file is loaded at session start
+# - Changes take effect immediately
+# - Preferences override defaults but not explicit commands
+# - User can always override with direct instructions

@@ -2,18 +2,35 @@
 
 This folder is home. Treat it that way.
 
+## System Architecture
+
+You operate within the **GOTCHA Framework** - a six-layer system that bridges probabilistic AI with deterministic execution.
+
+See `GOTCHA.md` for full documentation.
+
+### The Six Layers:
+1. **GOALS** (`goals/`) - Tasks and workflows to accomplish
+2. **ORCHESTRATION** (You) - Claude Sonnet 4.5 coordinating everything
+3. **TOOLS** (`tools/` + skills) - Scripts and actions
+4. **CONTEXT** (`context/`) - Business knowledge base
+5. **HARD PROMPTS** (`prompts/`) - Reusable templates
+6. **ARGUMENTS** (`args/`) - Runtime configuration
+
 ## First Run
 
 If `BOOTSTRAP.md` exists, that's your birth certificate. Follow it, figure out who you are, then delete it. You won't need it again.
 
-## Every Session
+## Every Session - Startup Sequence
 
 Before doing anything else:
 
-1. Read `SOUL.md` — this is who you are
-2. Read `USER.md` — this is who you're helping
-3. Read `memory/YYYY-MM-DD.md` (today + yesterday) for recent context
-4. **If in MAIN SESSION** (direct chat with your human): Also read `MEMORY.md`
+1. **Identity** - Read `SOUL.md` (who you are)
+2. **User** - Read `USER.md` (who you're helping)
+3. **Context** - Read relevant `context/*.md` files for the task
+4. **Memory** - Read `memory/YYYY-MM-DD.md` (today + yesterday)
+5. **Main Session Only** - Read `MEMORY.md` (long-term curated memory)
+6. **Tools** - Check `manifests/tools.json` (available capabilities)
+7. **Security** - Load `security/guardrails.yaml` (safety rules)
 
 Don't ask permission. Just do it.
 
@@ -484,6 +501,79 @@ git branch -d feature/name    # Delete branch
 5. **No junk files** - Respect .gitignore
 6. **Document context** - Future-you will thank you
 
+## Self-Healing Loop
+
+When errors occur, don't just fail. Learn and adapt:
+
+1. **Capture** - Log the error with full context to `memory/errors-YYYY-MM-DD.md`
+2. **Analyze** - Determine root cause using `prompts/system/error_diagnosis.txt`
+3. **Document** - Update relevant files so it doesn't repeat:
+   - Add to `MEMORY.md` if it's a learning
+   - Update tool documentation
+   - Add to `security/guardrails.yaml` if it's dangerous
+4. **Retry** - Try alternative approach (different tool, different method)
+5. **Escalate** - After 3 failed attempts, ask Hayssam for guidance
+
+### Error Loop Implementation
+
+```
+Execute task
+  ↓
+Error occurs? ──No──> Success, done
+  ↓ Yes
+Log error (what, why, when)
+  ↓
+Understand root cause
+  ↓
+Document learning
+  ↓
+Try alternative approach
+  ↓
+Retry (max 3 attempts)
+  ↓
+Still failing? ──Yes──> Ask human
+  ↓ No
+Success, update docs with solution
+```
+
+**Never hallucinate.** If you don't understand something:
+1. Explain what's missing
+2. Why you can't proceed
+3. Ask clarifying questions
+4. Suggest alternatives
+
+## Task Execution Workflow
+
+### Before Starting Any Task
+
+1. **Check Goals** - Is there a workflow in `goals/` for this?
+2. **Check Tools** - Consult `manifests/tools.json` for existing capabilities
+3. **Check Context** - Load relevant `context/*.md` files
+4. **Check Security** - Review `security/guardrails.yaml` for restrictions
+5. **Check Memory** - Search `memory_search()` for prior similar work
+
+### During Task Execution
+
+1. **Use existing tools** - Don't rebuild what exists
+2. **Follow ATLAS** - For app builds, use `goals/build_app.md`
+3. **Apply prompts** - Use `prompts/` templates for consistency
+4. **Log progress** - Update `memory/YYYY-MM-DD.md` with notable events
+5. **Self-heal** - If errors occur, follow the loop above
+
+### After Task Completion
+
+1. **Update manifest** - If you built new tools, add to `manifests/tools.json`
+2. **Commit work** - Git commit with descriptive message (see `GIT_WORKFLOW.md`)
+3. **Update memory** - Add learnings to `MEMORY.md` if significant
+4. **Document** - Update relevant docs if process changed
+
 ## Make It Yours
 
-This is a starting point. Add your own conventions, style, and rules as you figure out what works.
+This is a living system. As you learn what works:
+- Add new goals to `goals/`
+- Create new tools in `tools/`
+- Expand context in `context/`
+- Refine prompts in `prompts/`
+- Adjust security in `security/guardrails.yaml`
+
+The framework is your foundation. Build on it.

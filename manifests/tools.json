@@ -1,0 +1,185 @@
+{
+  "manifest_version": "1.0",
+  "last_updated": "2026-02-03",
+  "tools": [
+    {
+      "name": "windsurf-execute",
+      "path": "~/.nvm/versions/node/v22.12.0/lib/node_modules/openclaw/skills/windsurf-automation/windsurf-execute.cjs",
+      "type": "external_skill",
+      "purpose": "Execute coding tasks via Windsurf Cascade",
+      "category": "development",
+      "args": ["task_description"],
+      "output": "code_changes",
+      "budget": "500_credits_per_month",
+      "priority": "MANDATORY for all coding tasks",
+      "created": "2026-02-02"
+    },
+    {
+      "name": "windsurf-selector",
+      "path": "~/.nvm/versions/node/v22.12.0/lib/node_modules/openclaw/skills/windsurf-automation/selector.cjs",
+      "type": "external_skill",
+      "purpose": "Intelligent model selection for Windsurf tasks",
+      "category": "development",
+      "args": ["task_description", "--usage"],
+      "output": "model_selection",
+      "created": "2026-02-02"
+    },
+    {
+      "name": "weather",
+      "path": "~/.nvm/versions/node/v22.12.0/lib/node_modules/openclaw/skills/weather",
+      "type": "external_skill",
+      "purpose": "Get current weather and forecasts",
+      "category": "information",
+      "args": ["location"],
+      "output": "weather_data",
+      "created": "existing"
+    },
+    {
+      "name": "summarize",
+      "path": "~/.nvm/versions/node/v22.12.0/lib/node_modules/openclaw/skills/summarize",
+      "type": "external_skill",
+      "purpose": "Summarize URLs, videos, documents",
+      "category": "information",
+      "args": ["url_or_path", "--youtube", "auto"],
+      "output": "summary_or_transcript",
+      "created": "existing"
+    },
+    {
+      "name": "things-mac",
+      "path": "~/.nvm/versions/node/v22.12.0/lib/node_modules/openclaw/skills/things-mac",
+      "type": "external_skill",
+      "purpose": "Manage Things 3 tasks on macOS",
+      "category": "productivity",
+      "args": ["action", "task_data"],
+      "output": "task_result",
+      "created": "existing"
+    },
+    {
+      "name": "apple-notes",
+      "path": "~/.nvm/versions/node/v22.12.0/lib/node_modules/openclaw/skills/apple-notes",
+      "type": "external_skill",
+      "purpose": "Manage Apple Notes via memo CLI",
+      "category": "productivity",
+      "args": ["action", "note_data"],
+      "output": "note_result",
+      "created": "existing"
+    },
+    {
+      "name": "apple-reminders",
+      "path": "~/.nvm/versions/node/v22.12.0/lib/node_modules/openclaw/skills/apple-reminders",
+      "type": "external_skill",
+      "purpose": "Manage Apple Reminders via remindctl",
+      "category": "productivity",
+      "args": ["action", "reminder_data"],
+      "output": "reminder_result",
+      "created": "existing"
+    },
+    {
+      "name": "github",
+      "path": "~/.nvm/versions/node/v22.12.0/lib/node_modules/openclaw/skills/github",
+      "type": "external_skill",
+      "purpose": "GitHub CLI integration (issues, PRs, CI)",
+      "category": "development",
+      "args": ["subcommand", "args"],
+      "output": "github_result",
+      "created": "existing"
+    },
+    {
+      "name": "himalaya",
+      "path": "~/.nvm/versions/node/v22.12.0/lib/node_modules/openclaw/skills/himalaya",
+      "type": "external_skill",
+      "purpose": "Email management via IMAP/SMTP",
+      "category": "communication",
+      "args": ["action", "email_data"],
+      "output": "email_result",
+      "requires_approval": true,
+      "created": "existing"
+    },
+    {
+      "name": "web_search",
+      "path": "built-in",
+      "type": "native_tool",
+      "purpose": "Search the web via Brave API",
+      "category": "information",
+      "args": ["query", "count"],
+      "output": "search_results",
+      "created": "built-in"
+    },
+    {
+      "name": "web_fetch",
+      "path": "built-in",
+      "type": "native_tool",
+      "purpose": "Fetch and extract content from URLs",
+      "category": "information",
+      "args": ["url"],
+      "output": "page_content",
+      "created": "built-in"
+    },
+    {
+      "name": "browser",
+      "path": "built-in",
+      "type": "native_tool",
+      "purpose": "Control web browser (OpenClaw)",
+      "category": "automation",
+      "args": ["action", "request"],
+      "output": "browser_result",
+      "created": "built-in"
+    },
+    {
+      "name": "memory_search",
+      "path": "built-in",
+      "type": "native_tool",
+      "purpose": "Semantic search across memory files",
+      "category": "memory",
+      "args": ["query"],
+      "output": "search_results",
+      "mandatory": "Use before answering questions about prior work",
+      "created": "built-in"
+    },
+    {
+      "name": "memory_get",
+      "path": "built-in",
+      "type": "native_tool",
+      "purpose": "Read specific memory file snippets",
+      "category": "memory",
+      "args": ["path", "from", "lines"],
+      "output": "file_content",
+      "created": "built-in"
+    },
+    {
+      "name": "cron",
+      "path": "built-in",
+      "type": "native_tool",
+      "purpose": "Manage scheduled jobs and reminders",
+      "category": "automation",
+      "args": ["action", "job"],
+      "output": "cron_result",
+      "created": "built-in"
+    },
+    {
+      "name": "message",
+      "path": "built-in",
+      "type": "native_tool",
+      "purpose": "Send messages via configured channels",
+      "category": "communication",
+      "args": ["action", "channel", "message"],
+      "output": "message_result",
+      "requires_approval": "External communications only",
+      "created": "built-in"
+    }
+  ],
+  "categories": {
+    "development": "Code creation, git, testing, deployment",
+    "information": "Search, research, data gathering",
+    "productivity": "Tasks, notes, reminders, calendars",
+    "communication": "Email, messaging, social media",
+    "automation": "Browser control, scheduling, workflows",
+    "memory": "Context management, recall, search"
+  },
+  "usage_notes": {
+    "check_before_building": "Always check this manifest before creating new tools. If it exists, use it. If not, build it and add it here.",
+    "update_after_creation": "When you create a new tool, immediately update this manifest.",
+    "priority_order": "1. Native tools (built-in), 2. External skills (installed), 3. Custom tools (build if needed)",
+    "coding_rule": "NEVER write code directly. ALWAYS use windsurf-execute for ANY coding task."
+  }
+}

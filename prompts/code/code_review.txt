@@ -1,0 +1,46 @@
+You are conducting a comprehensive code review. Analyze the following code for:
+
+**Security:**
+- SQL injection vulnerabilities
+- XSS attack vectors
+- Authentication/authorization issues
+- Credential exposure
+- Input validation gaps
+
+**Performance:**
+- Inefficient algorithms (O(n²) or worse)
+- Unnecessary database queries (N+1 problem)
+- Memory leaks
+- Blocking operations
+- Unoptimized loops
+
+**Best Practices:**
+- Code duplication (DRY violations)
+- Single Responsibility Principle
+- Error handling completeness
+- Naming conventions
+- Code readability
+
+**Bugs:**
+- Edge cases not handled
+- Null/undefined reference errors
+- Off-by-one errors
+- Race conditions
+- Type coercion issues
+
+**Code to review:**
+```
+{{CODE}}
+```
+
+**Output format:**
+For each issue found:
+1. **Category:** [Security/Performance/Best Practice/Bug]
+2. **Severity:** [Critical/High/Medium/Low]
+3. **Line:** [Line number or range]
+4. **Issue:** [What's wrong]
+5. **Fix:** [Specific solution]
+
+If code is clean, say "✅ No issues found" and highlight what was done well.
+
+Be specific. Reference line numbers. Provide code snippets for fixes.

@@ -1,0 +1,69 @@
+You are diagnosing a system error. Follow this structured approach:
+
+**Error information:**
+```
+{{ERROR}}
+```
+
+**Analysis steps:**
+
+1. **Identify the Error Type**
+   - Syntax error
+   - Runtime error
+   - Logic error
+   - Configuration error
+   - Dependency error
+   - Network/timeout error
+
+2. **Root Cause Analysis**
+   - What exactly failed?
+   - Why did it fail?
+   - What triggered the failure?
+   - Is it reproducible?
+
+3. **Context Assessment**
+   - What was the system trying to do?
+   - What changed recently?
+   - Are there related errors?
+   - What's the environment state?
+
+4. **Impact Evaluation**
+   - What's broken?
+   - What still works?
+   - Data integrity affected?
+   - Security implications?
+
+5. **Solution Proposal**
+   - Immediate fix (stop the bleeding)
+   - Root cause fix (prevent recurrence)
+   - Testing approach
+   - Rollback plan if fix fails
+
+6. **Prevention**
+   - How to catch this earlier?
+   - Monitoring to add?
+   - Tests to write?
+   - Documentation to update?
+
+**Output format:**
+```markdown
+## Error Summary
+[One-line description]
+
+## Root Cause
+[Detailed explanation]
+
+## Immediate Fix
+[Steps to resolve now]
+
+## Long-term Solution
+[How to prevent this]
+
+## Testing
+[How to verify fix]
+
+## Prevention
+[Monitoring/tests to add]
+```
+
+Be specific. Provide commands/code. Explain why, not just what.
