@@ -1,9 +1,8 @@
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
-import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import {
-    CallToolRequestSchema,
-    ListToolsRequestSchema,
-    Tool,
+  CallToolRequestSchema,
+  ListToolsRequestSchema,
+  Tool,
 } from "@modelcontextprotocol/sdk/types.js";
 import * as net from "net";
 import * as vscode from "vscode";
@@ -93,14 +92,19 @@ export class McpServer {
         {
           name: "list_models",
           description:
-            "Get a list of all available Windsurf models with their details (credits, strengths, descriptions)",
+            "Get a list of all available Windsurf models with their details (credits, strengths, descriptions, promos). Check daily for new promotional pricing!",
           inputSchema: {
             type: "object",
             properties: {
               tier: {
                 type: "string",
                 description:
-                  "Filter by tier: free, cheap, smart, fast, experimental (optional - leave empty for all models)",
+                  "Filter by tier: free, cheap, smart, fast, byok, premium, standard (optional - leave empty for all models)",
+              },
+              promo_only: {
+                type: "boolean",
+                description:
+                  "If true, only return models with promotional pricing (gift icon in Windsurf). These are time-limited offers with excellent value!",
               },
             },
           },
@@ -174,8 +178,12 @@ export class McpServer {
 
           case "list_models": {
             const tier = args?.tier as string | undefined;
+            const promoOnly = args?.promo_only as boolean | undefined;
             let models;
-            if (tier) {
+
+            if (promoOnly) {
+              models = this.cascadeController.getPromoModels();
+            } else if (tier) {
               models = this.cascadeController.getModelsByTier(tier);
             } else {
               models = Object.values(this.cascadeController.getAllModels());
@@ -190,6 +198,9 @@ export class McpServer {
                 credits: number | string;
                 description: string;
                 strengths: string[];
+                isPromo?: boolean;
+                promoDescription?: string;
+                originalCost?: string;
               }) => ({
                 id: m.id,
                 name: m.name,
@@ -197,8 +208,15 @@ export class McpServer {
                 credits: m.credits,
                 description: m.description,
                 strengths: m.strengths,
+                isPromo: m.isPromo || false,
+                promoDescription: m.promoDescription,
+                originalCost: m.originalCost,
               }),
             );
+
+            // Separate promo models for special highlighting
+            const promoModels = formatted.filter((m) => m.isPromo);
+            const regularModels = formatted.filter((m) => !m.isPromo);
 
             return {
               content: [
@@ -208,9 +226,14 @@ export class McpServer {
                     {
                       count: formatted.length,
                       tier: tier || "all",
-                      models: formatted,
+                      promoCount: promoModels.length,
+                      dailyCheckReminder:
+                        "Check daily for new promotional pricing! Gift icon = limited time offer!",
+                      promoModels:
+                        promoModels.length > 0 ? promoModels : undefined,
+                      regularModels: regularModels,
                       usage:
-                        "Use 'id' or 'tier' field with delegate_to_cascade or switch_cascade_model",
+                        "Use 'id' or 'tier' field with delegate_to_cascade or switch_cascade_model. PROMO models offer best value - use them while available!",
                     },
                     null,
                     2,
@@ -255,16 +278,67 @@ export class McpServer {
     this.tcpServer = net.createServer((socket) => {
       console.log("MCP client connected");
 
-      const transport = new StdioServerTransport();
+      // Create a custom transport that works with the socket
+      const transport = {
+        onmessage: undefined as ((message: unknown) => void) | undefined,
+        onclose: undefined as (() => void) | undefined,
+        onerror: undefined as ((error: Error) => void) | undefined,
 
-      socket.pipe(process.stdin);
-      process.stdout.pipe(socket);
+        start: async () => {
+          // Transport is ready
+        },
 
-      this.server.connect(transport);
+        send: async (message: unknown) => {
+          const json = JSON.stringify(message);
+          return new Promise<void>((resolve) => {
+            if (socket.write(json + "\n")) {
+              resolve();
+            } else {
+              socket.once("drain", resolve);
+            }
+          });
+        },
+
+        close: async () => {
+          socket.end();
+        },
+      };
+
+      // Handle incoming data
+      let buffer = "";
+      socket.on("data", (data) => {
+        buffer += data.toString();
+        const lines = buffer.split("\n");
+        buffer = lines.pop() || "";
+        for (const line of lines) {
+          if (line.trim() && transport.onmessage) {
+            try {
+              const message = JSON.parse(line);
+              transport.onmessage(message);
+            } catch (error) {
+              if (transport.onerror) {
+                transport.onerror(error as Error);
+              }
+            }
+          }
+        }
+      });
 
       socket.on("close", () => {
         console.log("MCP client disconnected");
+        if (transport.onclose) {
+          transport.onclose();
+        }
       });
+
+      socket.on("error", (error) => {
+        if (transport.onerror) {
+          transport.onerror(error);
+        }
+      });
+
+      // Connect server to transport
+      this.server.connect(transport as any);
     });
 
     return new Promise<void>((resolve, reject) => {

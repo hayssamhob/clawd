@@ -1,0 +1,464 @@
+{
+  "extracted_at": "2026-02-03T02:13:22.332Z",
+  "source": "Windsurf Model Dropdown (validated)",
+  "total_models": 82,
+  "models": [
+    {
+      "name": "Claude 3.5 Sonnet",
+      "cost": "2x",
+      "badges": []
+    },
+    {
+      "name": "Claude 3.7 Sonnet",
+      "cost": "2x",
+      "badges": []
+    },
+    {
+      "name": "Claude 3.7 Sonnet (Thinking)",
+      "cost": "3x",
+      "badges": []
+    },
+    {
+      "name": "Claude Haiku 4.5",
+      "cost": "1x",
+      "badges": []
+    },
+    {
+      "name": "Claude Opus 4 (BYOK)",
+      "cost": "BYOK",
+      "badges": [
+        "Beta"
+      ]
+    },
+    {
+      "name": "Claude Opus 4 (Thinking, BYOK)",
+      "cost": "BYOK",
+      "badges": [
+        "Beta"
+      ]
+    },
+    {
+      "name": "Claude Opus 4.1",
+      "cost": "20x",
+      "badges": []
+    },
+    {
+      "name": "Claude Opus 4.1 (Thinking)",
+      "cost": "20x",
+      "badges": []
+    },
+    {
+      "name": "Claude Opus 4.5",
+      "cost": "4x",
+      "badges": []
+    },
+    {
+      "name": "Claude Opus 4.5 (Thinking)",
+      "cost": "5x",
+      "badges": []
+    },
+    {
+      "name": "Claude Sonnet 4",
+      "cost": "2x",
+      "badges": []
+    },
+    {
+      "name": "Claude Sonnet 4 (BYOK)",
+      "cost": "BYOK",
+      "badges": []
+    },
+    {
+      "name": "Claude Sonnet 4 (Thinking, BYOK)",
+      "cost": "BYOK",
+      "badges": []
+    },
+    {
+      "name": "Claude Sonnet 4 (Thinking)",
+      "cost": "3x",
+      "badges": []
+    },
+    {
+      "name": "Claude Sonnet 4.5",
+      "cost": "2x",
+      "badges": [
+        "Promo"
+      ]
+    },
+    {
+      "name": "Claude Sonnet 4.5 (1M)",
+      "cost": "10x",
+      "badges": []
+    },
+    {
+      "name": "Claude Sonnet 4.5 Thinking",
+      "cost": "3x",
+      "badges": [
+        "Promo"
+      ]
+    },
+    {
+      "name": "DeepSeek R1 (0528)",
+      "cost": "Free",
+      "badges": []
+    },
+    {
+      "name": "DeepSeek V3 (0324)",
+      "cost": "Free",
+      "badges": []
+    },
+    {
+      "name": "Gemini 2.5 Pro",
+      "cost": "1x",
+      "badges": []
+    },
+    {
+      "name": "Gemini 3 Flash High",
+      "cost": "1.75x",
+      "badges": [
+        "New"
+      ]
+    },
+    {
+      "name": "Gemini 3 Flash Low",
+      "cost": "1x",
+      "badges": [
+        "New"
+      ]
+    },
+    {
+      "name": "Gemini 3 Flash Medium",
+      "cost": "1x",
+      "badges": [
+        "New"
+      ]
+    },
+    {
+      "name": "Gemini 3 Flash Minimal",
+      "cost": "0.75x",
+      "badges": [
+        "New"
+      ]
+    },
+    {
+      "name": "Gemini 3 Pro High",
+      "cost": "2x",
+      "badges": []
+    },
+    {
+      "name": "Gemini 3 Pro Low",
+      "cost": "1x",
+      "badges": []
+    },
+    {
+      "name": "Gemini 3 Pro Medium",
+      "cost": "1.5x",
+      "badges": []
+    },
+    {
+      "name": "Gemini 3 Pro Minimal",
+      "cost": "1x",
+      "badges": []
+    },
+    {
+      "name": "GLM 4.7",
+      "cost": "0.25x",
+      "badges": [
+        "Beta"
+      ]
+    },
+    {
+      "name": "GPT-4.1",
+      "cost": "1x",
+      "badges": []
+    },
+    {
+      "name": "GPT-4o",
+      "cost": "1x",
+      "badges": []
+    },
+    {
+      "name": "GPT-5 (high reasoning)",
+      "cost": "2x",
+      "badges": []
+    },
+    {
+      "name": "GPT-5 (low reasoning)",
+      "cost": "0.5x",
+      "badges": []
+    },
+    {
+      "name": "GPT-5 (medium reasoning)",
+      "cost": "1x",
+      "badges": []
+    },
+    {
+      "name": "GPT-5-Codex",
+      "cost": "0.5x",
+      "badges": []
+    },
+    {
+      "name": "GPT-5.1 (high reasoning)",
+      "cost": "2x",
+      "badges": []
+    },
+    {
+      "name": "GPT-5.1 (high, priority)",
+      "cost": "4x",
+      "badges": []
+    },
+    {
+      "name": "GPT-5.1 (low reasoning)",
+      "cost": "0.5x",
+      "badges": []
+    },
+    {
+      "name": "GPT-5.1 (low, priority)",
+      "cost": "1x",
+      "badges": []
+    },
+    {
+      "name": "GPT-5.1 (medium reasoning)",
+      "cost": "1x",
+      "badges": []
+    },
+    {
+      "name": "GPT-5.1 (medium, priority)",
+      "cost": "2x",
+      "badges": []
+    },
+    {
+      "name": "GPT-5.1 (no reasoning, priority)",
+      "cost": "1x",
+      "badges": []
+    },
+    {
+      "name": "GPT-5.1 (no reasoning)",
+      "cost": "0.5x",
+      "badges": []
+    },
+    {
+      "name": "GPT-5.1-Codex",
+      "cost": "Free",
+      "badges": []
+    },
+    {
+      "name": "GPT-5.1-Codex Low",
+      "cost": "Free",
+      "badges": []
+    },
+    {
+      "name": "GPT-5.1-Codex Max High",
+      "cost": "1x",
+      "badges": []
+    },
+    {
+      "name": "GPT-5.1-Codex Max Low",
+      "cost": "Free",
+      "badges": []
+    },
+    {
+      "name": "GPT-5.1-Codex Max Medium",
+      "cost": "0.5x",
+      "badges": []
+    },
+    {
+      "name": "GPT-5.1-Codex-Mini",
+      "cost": "Free",
+      "badges": []
+    },
+    {
+      "name": "GPT-5.1-Codex-Mini Low",
+      "cost": "Free",
+      "badges": []
+    },
+    {
+      "name": "GPT-5.2 High Reasoning",
+      "cost": "3x",
+      "badges": []
+    },
+    {
+      "name": "GPT-5.2 High Reasoning Fast",
+      "cost": "6x",
+      "badges": []
+    },
+    {
+      "name": "GPT-5.2 Low Reasoning",
+      "cost": "1x",
+      "badges": []
+    },
+    {
+      "name": "GPT-5.2 Low Reasoning Fast",
+      "cost": "2x",
+      "badges": [
+        "Selected"
+      ]
+    },
+    {
+      "name": "GPT-5.2 Medium Reasoning",
+      "cost": "2x",
+      "badges": []
+    },
+    {
+      "name": "GPT-5.2 Medium Reasoning Fast",
+      "cost": "4x",
+      "badges": []
+    },
+    {
+      "name": "GPT-5.2 No Reasoning",
+      "cost": "1x",
+      "badges": []
+    },
+    {
+      "name": "GPT-5.2 No Reasoning Fast",
+      "cost": "2x",
+      "badges": []
+    },
+    {
+      "name": "GPT-5.2 X-High Reasoning",
+      "cost": "8x",
+      "badges": []
+    },
+    {
+      "name": "GPT-5.2 X-High Reasoning Fast",
+      "cost": "16x",
+      "badges": []
+    },
+    {
+      "name": "GPT-5.2-Codex High",
+      "cost": "2x",
+      "badges": [
+        "New"
+      ]
+    },
+    {
+      "name": "GPT-5.2-Codex High Fast",
+      "cost": "4x",
+      "badges": [
+        "New"
+      ]
+    },
+    {
+      "name": "GPT-5.2-Codex Low",
+      "cost": "1x",
+      "badges": [
+        "New"
+      ]
+    },
+    {
+      "name": "GPT-5.2-Codex Low Fast",
+      "cost": "2x",
+      "badges": [
+        "New"
+      ]
+    },
+    {
+      "name": "GPT-5.2-Codex Medium",
+      "cost": "1x",
+      "badges": [
+        "New"
+      ]
+    },
+    {
+      "name": "GPT-5.2-Codex Medium Fast",
+      "cost": "2x",
+      "badges": [
+        "New"
+      ]
+    },
+    {
+      "name": "GPT-5.2-Codex XHigh",
+      "cost": "3x",
+      "badges": [
+        "New"
+      ]
+    },
+    {
+      "name": "GPT-5.2-Codex XHigh Fast",
+      "cost": "6x",
+      "badges": [
+        "New"
+      ]
+    },
+    {
+      "name": "GPT-OSS 120B (Medium)",
+      "cost": "0.25x",
+      "badges": []
+    },
+    {
+      "name": "Grok Code Fast 1",
+      "cost": "Free",
+      "badges": []
+    },
+    {
+      "name": "Kimi K2",
+      "cost": "0.5x",
+      "badges": []
+    },
+    {
+      "name": "Kimi K2.5",
+      "cost": "Free",
+      "badges": [
+        "New",
+        "Promo"
+      ]
+    },
+    {
+      "name": "Minimax M2",
+      "cost": "0.5x",
+      "badges": []
+    },
+    {
+      "name": "Minimax M2.1",
+      "cost": "0.5x",
+      "badges": [
+        "Beta"
+      ]
+    },
+    {
+      "name": "o3",
+      "cost": "1x",
+      "badges": []
+    },
+    {
+      "name": "o3 (high reasoning)",
+      "cost": "1x",
+      "badges": []
+    },
+    {
+      "name": "Qwen3-Coder",
+      "cost": "0.5x",
+      "badges": []
+    },
+    {
+      "name": "SWE-1",
+      "cost": "Free",
+      "badges": []
+    },
+    {
+      "name": "SWE-1.5",
+      "cost": "Free",
+      "badges": [
+        "New",
+        "Promo"
+      ]
+    },
+    {
+      "name": "SWE-1.5 (Fast)",
+      "cost": "0.5x",
+      "badges": [
+        "Fast",
+        "Promo"
+      ]
+    },
+    {
+      "name": "xAI Grok-3",
+      "cost": "1x",
+      "badges": []
+    },
+    {
+      "name": "xAI Grok-3 mini (Thinking)",
+      "cost": "0.125x",
+      "badges": []
+    }
+  ]
+}

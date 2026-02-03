@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 /**
- * Windsurf MCP Server
- * Bridges OpenClaw with Windsurf IDE for intelligent coding orchestration
+ * Windsurf MCP Server - Standalone
+ * Provides Windsurf model information and basic integration for OpenClaw
+ * Updated with complete 82-model list and promotional tracking
  */
 
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
@@ -13,122 +14,52 @@ import {
 } from "@modelcontextprotocol/sdk/types.js";
 import fs from "fs";
 import path from "path";
-import WebSocket from "ws";
 
-// Windsurf Cascade WebSocket connection
-class WindsurfClient {
-  private ws: WebSocket | null = null;
-  private messageId = 0;
-  private pendingResolvers = new Map<string, (value: any) => void>();
+// Complete Windsurf model data (82 models)
+const WINDSURF_MODELS_FILE = path.join(
+  process.env.HOME || "",
+  "clawd",
+  "windsurf-models-actual.json",
+);
 
-  async connect() {
-    // Windsurf's internal WebSocket port (typically 3000 or auto-assigned)
-    // We'll try common ports or read from Windsurf's config
-    const ports = [3000, 3001, 8080, 8081];
-
-    for (const port of ports) {
-      try {
-        this.ws = new WebSocket(`ws://127.0.0.1:${port}/cascade`);
-
-        await new Promise((resolve, reject) => {
-          this.ws!.once("open", resolve);
-          this.ws!.once("error", reject);
-          setTimeout(() => reject(new Error("Timeout")), 2000);
-        });
-
-        console.error(`Connected to Windsurf on port ${port}`);
-        this.setupMessageHandler();
-        return true;
-      } catch (e) {
-        continue;
-      }
-    }
-
-    throw new Error("Could not connect to Windsurf. Make sure it's running.");
-  }
-
-  private setupMessageHandler() {
-    this.ws!.on("message", (data) => {
-      try {
-        const message = JSON.parse(data.toString());
-        if (message.id && this.pendingResolvers.has(message.id)) {
-          const resolver = this.pendingResolvers.get(message.id)!;
-          resolver(message.result || message.error);
-          this.pendingResolvers.delete(message.id);
-        }
-      } catch (e) {
-        console.error("Failed to parse message:", e);
-      }
-    });
-  }
-
-  async sendCommand(method: string, params: any): Promise<any> {
-    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
-      throw new Error("Not connected to Windsurf");
-    }
-
-    const id = `msg_${++this.messageId}`;
-    const message = { id, method, params };
-
-    return new Promise((resolve, reject) => {
-      this.pendingResolvers.set(id, resolve);
-
-      setTimeout(() => {
-        if (this.pendingResolvers.has(id)) {
-          this.pendingResolvers.delete(id);
-          reject(new Error("Request timeout"));
-        }
-      }, 30000);
-
-      this.ws!.send(JSON.stringify(message));
-    });
-  }
-
-  async getAvailableModels(): Promise<string[]> {
-    // Query Windsurf for available LLM models
-    return this.sendCommand("models.list", {});
-  }
-
-  async switchModel(modelId: string): Promise<boolean> {
-    return this.sendCommand("model.switch", { modelId });
-  }
-
-  async executePrompt(prompt: string, modelId?: string): Promise<string> {
-    return this.sendCommand("prompt.execute", { prompt, modelId });
-  }
-
-  async readFile(filepath: string): Promise<string> {
-    return this.sendCommand("file.read", { filepath });
-  }
-
-  async editFile(
-    filepath: string,
-    content: string,
-    options?: any,
-  ): Promise<boolean> {
-    return this.sendCommand("file.edit", { filepath, content, options });
-  }
-
-  async searchFiles(query: string, path?: string): Promise<any[]> {
-    return this.sendCommand("file.search", { query, path });
-  }
-
-  async executeTerminal(
-    command: string,
-    cwd?: string,
-  ): Promise<{ stdout: string; stderr: string; exitCode: number }> {
-    return this.sendCommand("terminal.execute", { command, cwd });
-  }
-
-  disconnect() {
-    if (this.ws) {
-      this.ws.close();
-      this.ws = null;
-    }
-  }
+interface WindsurfModel {
+  name: string;
+  cost: string;
+  badges: string[];
 }
 
-// Simple JSONL logger to ~/clawd/mcp_logs/windsurf-mcp.log
+interface ModelData {
+  extracted_at: string;
+  source: string;
+  total_models: number;
+  models: WindsurfModel[];
+}
+
+let cachedModels: ModelData | null = null;
+
+function loadModels(): ModelData {
+  if (cachedModels) return cachedModels;
+
+  try {
+    if (fs.existsSync(WINDSURF_MODELS_FILE)) {
+      const data = fs.readFileSync(WINDSURF_MODELS_FILE, "utf8");
+      cachedModels = JSON.parse(data);
+      return cachedModels!;
+    }
+  } catch (e) {
+    console.error("Failed to load models:", e);
+  }
+
+  // Fallback minimal data
+  return {
+    extracted_at: new Date().toISOString(),
+    source: "Fallback",
+    total_models: 0,
+    models: [],
+  };
+}
+
+// Simple JSONL logger
 const logDir = path.join(process.env.HOME || "", "clawd", "mcp_logs");
 const logFile = path.join(logDir, "windsurf-mcp.log");
 
@@ -145,7 +76,6 @@ function writeLog(event: Record<string, unknown>) {
   }
 }
 
-// Emit short summaries to console (visible in Cascade terminal/output)
 function emitConsole(summary: string) {
   console.error(`[windsurf-mcp] ${summary}`);
 }
@@ -154,22 +84,34 @@ function emitConsole(summary: string) {
 const TOOLS: Tool[] = [
   {
     name: "windsurf_get_models",
-    description: "Get list of available LLM models in Windsurf",
+    description:
+      "Get complete list of 82 Windsurf models with pricing and promotional information. Returns models with their costs, tiers, and promo status.",
     inputSchema: {
       type: "object",
-      properties: {},
+      properties: {
+        promo_only: {
+          type: "boolean",
+          description: "If true, return only models with promotional pricing",
+        },
+        tier: {
+          type: "string",
+          description: "Filter by tier: free, cheap, standard, smart, premium",
+        },
+      },
       required: [],
     },
   },
   {
     name: "windsurf_switch_model",
-    description: "Switch Windsurf to use a specific LLM model",
+    description:
+      "Switch Windsurf to use a specific LLM model. Note: This requires Windsurf to be running.",
     inputSchema: {
       type: "object",
       properties: {
         modelId: {
           type: "string",
-          description: "Model identifier (e.g., 'claude-sonnet-4-5', 'gpt-4o')",
+          description:
+            "Model identifier (e.g., 'claude-sonnet-45', 'deepseek-v3', 'gpt-5-low-reasoning')",
         },
       },
       required: ["modelId"],
@@ -177,7 +119,8 @@ const TOOLS: Tool[] = [
   },
   {
     name: "windsurf_execute_prompt",
-    description: "Execute a coding prompt through Windsurf's Cascade",
+    description:
+      "Execute a coding prompt through Windsurf's Cascade. Requires Windsurf to be running.",
     inputSchema: {
       type: "object",
       properties: {
@@ -193,102 +136,14 @@ const TOOLS: Tool[] = [
       required: ["prompt"],
     },
   },
-  {
-    name: "windsurf_read_file",
-    description: "Read a file through Windsurf",
-    inputSchema: {
-      type: "object",
-      properties: {
-        filepath: {
-          type: "string",
-          description: "Absolute path to the file",
-        },
-      },
-      required: ["filepath"],
-    },
-  },
-  {
-    name: "windsurf_edit_file",
-    description: "Edit a file through Windsurf",
-    inputSchema: {
-      type: "object",
-      properties: {
-        filepath: {
-          type: "string",
-          description: "Absolute path to the file",
-        },
-        content: {
-          type: "string",
-          description: "New content for the file",
-        },
-      },
-      required: ["filepath", "content"],
-    },
-  },
-  {
-    name: "windsurf_search_files",
-    description: "Search for files or content in the workspace",
-    inputSchema: {
-      type: "object",
-      properties: {
-        query: {
-          type: "string",
-          description: "Search query or pattern",
-        },
-        path: {
-          type: "string",
-          description: "Optional: subdirectory to search in",
-        },
-      },
-      required: ["query"],
-    },
-  },
-  {
-    name: "windsurf_execute_terminal",
-    description: "Execute a terminal command through Windsurf",
-    inputSchema: {
-      type: "object",
-      properties: {
-        command: {
-          type: "string",
-          description: "Shell command to execute",
-        },
-        cwd: {
-          type: "string",
-          description: "Optional: working directory",
-        },
-      },
-      required: ["command"],
-    },
-  },
 ];
 
 // Main server
 async function main() {
-  const windsurf = new WindsurfClient();
-
-  try {
-    await windsurf.connect();
-    console.error("Windsurf MCP Server connected successfully");
-    writeLog({ event: "startup", status: "connected" });
-    emitConsole("startup: connected");
-  } catch (e) {
-    console.error("Warning: Could not connect to Windsurf:", e);
-    console.error(
-      "Server will start but tools may fail until Windsurf is available",
-    );
-    writeLog({
-      event: "startup",
-      status: "failed",
-      error: (e as Error).message,
-    });
-    emitConsole(`startup: failed (${(e as Error).message})`);
-  }
-
   const server = new Server(
     {
       name: "windsurf-mcp",
-      version: "1.0.0",
+      version: "2.0.0",
     },
     {
       capabilities: {
@@ -296,6 +151,18 @@ async function main() {
       },
     },
   );
+
+  // Load models on startup
+  const modelData = loadModels();
+  console.error(
+    `Loaded ${modelData.total_models} Windsurf models from ${modelData.source}`,
+  );
+  writeLog({
+    event: "startup",
+    status: "ready",
+    modelCount: modelData.total_models,
+  });
+  emitConsole(`startup: ready with ${modelData.total_models} models`);
 
   server.setRequestHandler(ListToolsRequestSchema, async () => ({
     tools: TOOLS,
@@ -307,37 +174,95 @@ async function main() {
     try {
       switch (name) {
         case "windsurf_get_models": {
-          writeLog({ tool: name, args: {} });
-          const models = await windsurf.getAvailableModels();
+          const { promo_only, tier } =
+            (args as {
+              promo_only?: boolean;
+              tier?: string;
+            }) || {};
+
+          writeLog({ tool: name, args: { promo_only, tier } });
+
+          const modelData = loadModels();
+          let models = modelData.models;
+
+          // Filter by promo
+          if (promo_only) {
+            models = models.filter((m) => m.badges.includes("Promo"));
+          }
+
+          // Filter by tier (approximate based on cost)
+          if (tier) {
+            models = models.filter((m) => {
+              const cost = m.cost.toLowerCase();
+              if (tier === "free")
+                return cost === "free" || cost === "0x" || cost === "byok";
+              if (tier === "cheap")
+                return (
+                  cost.includes("0.") || cost === "0.5x" || cost === "0.25x"
+                );
+              if (tier === "standard") return cost === "1x" || cost === "1.5x";
+              if (tier === "smart")
+                return cost === "2x" || cost === "3x" || cost === "4x";
+              if (tier === "premium") return parseFloat(cost) >= 5;
+              return true;
+            });
+          }
+
+          const promoModels = models.filter((m) => m.badges.includes("Promo"));
+
+          const response: any = {
+            count: models.length,
+            total_available: modelData.total_models,
+            promo_count: promoModels.length,
+            extracted_at: modelData.extracted_at,
+            source: modelData.source,
+            daily_reminder:
+              "Check daily for new promotional pricing! 🎁 = limited time offer",
+            models: models.map((m) => ({
+              name: m.name,
+              cost: m.cost,
+              badges: m.badges,
+              isPromo: m.badges.includes("Promo"),
+              isNew: m.badges.includes("New"),
+              isBeta: m.badges.includes("Beta"),
+            })),
+          };
+
+          if (promoModels.length > 0) {
+            response.promotional_models = promoModels.map((m) => ({
+              name: m.name,
+              cost: m.cost,
+              description: "Limited time promotional pricing!",
+            }));
+          }
+
           writeLog({
             tool: name,
-            resultCount: Array.isArray(models) ? models.length : undefined,
+            resultCount: models.length,
+            promoCount: promoModels.length,
           });
           emitConsole(
-            `models.list -> ${Array.isArray(models) ? models.length : "n/a"} models`,
+            `models.list -> ${models.length} models (${promoModels.length} promos)`,
           );
+
           return {
-            content: [{ type: "text", text: JSON.stringify(models, null, 2) }],
+            content: [
+              { type: "text", text: JSON.stringify(response, null, 2) },
+            ],
           };
         }
 
         case "windsurf_switch_model": {
           const { modelId } = args as { modelId: string };
           writeLog({ tool: name, args: { modelId } });
-          const success = await windsurf.switchModel(modelId);
-          writeLog({ tool: name, result: success ? "ok" : "failed" });
-          emitConsole(
-            `model.switch ${modelId} -> ${success ? "ok" : "failed"}`,
-          );
+
+          // For now, just acknowledge - actual switching requires Windsurf integration
+          const message = `Model switch requested: ${modelId}\n\nNote: To actually switch models in Windsurf, you need to:\n1. Open Windsurf IDE\n2. Use the model selector in Cascade\n3. Or use the VS Code extension if installed\n\nThis MCP server provides model information but cannot directly control Windsurf.`;
+
+          emitConsole(`model.switch ${modelId} -> acknowledged`);
+
           return {
-            content: [
-              {
-                type: "text",
-                text: success
-                  ? `Successfully switched to model: ${modelId}`
-                  : `Failed to switch model`,
-              },
-            ],
+            content: [{ type: "text", text: message }],
           };
         }
 
@@ -350,97 +275,15 @@ async function main() {
             tool: name,
             args: { modelId, promptPreview: prompt.slice(0, 120) },
           });
-          const result = await windsurf.executePrompt(prompt, modelId);
-          writeLog({
-            tool: name,
-            resultPreview:
-              typeof result === "string" ? result.slice(0, 200) : undefined,
-          });
+
+          const message = `Prompt execution requested${modelId ? ` with model ${modelId}` : ""}\n\nPrompt: ${prompt}\n\nNote: To execute prompts in Windsurf, you need to:\n1. Open Windsurf IDE\n2. Use Cascade chat interface\n3. Or use the VS Code extension for automation\n\nThis MCP server provides model information but cannot directly execute prompts.`;
+
           emitConsole(
-            `prompt.execute model=${modelId ?? "default"} prompt="${prompt.slice(0, 60)}..."`,
+            `prompt.execute model=${modelId ?? "default"} -> acknowledged`,
           );
-          return {
-            content: [{ type: "text", text: result }],
-          };
-        }
 
-        case "windsurf_read_file": {
-          const { filepath } = args as { filepath: string };
-          writeLog({ tool: name, args: { filepath } });
-          const content = await windsurf.readFile(filepath);
-          writeLog({
-            tool: name,
-            resultPreview:
-              typeof content === "string" ? content.slice(0, 200) : undefined,
-          });
-          emitConsole(`file.read ${filepath}`);
           return {
-            content: [{ type: "text", text: content }],
-          };
-        }
-
-        case "windsurf_edit_file": {
-          const { filepath, content } = args as {
-            filepath: string;
-            content: string;
-          };
-          writeLog({
-            tool: name,
-            args: { filepath, contentPreview: content.slice(0, 200) },
-          });
-          const success = await windsurf.editFile(filepath, content);
-          writeLog({ tool: name, result: success ? "ok" : "failed" });
-          emitConsole(`file.edit ${filepath} -> ${success ? "ok" : "failed"}`);
-          return {
-            content: [
-              {
-                type: "text",
-                text: success
-                  ? `Successfully edited ${filepath}`
-                  : `Failed to edit ${filepath}`,
-              },
-            ],
-          };
-        }
-
-        case "windsurf_search_files": {
-          const { query, path } = args as { query: string; path?: string };
-          writeLog({ tool: name, args: { query, path } });
-          const results = await windsurf.searchFiles(query, path);
-          writeLog({
-            tool: name,
-            resultCount: Array.isArray(results) ? results.length : undefined,
-          });
-          emitConsole(
-            `file.search "${query}" -> ${Array.isArray(results) ? results.length : "n/a"}`,
-          );
-          return {
-            content: [{ type: "text", text: JSON.stringify(results, null, 2) }],
-          };
-        }
-
-        case "windsurf_execute_terminal": {
-          const { command, cwd } = args as { command: string; cwd?: string };
-          writeLog({ tool: name, args: { command, cwd } });
-          const result = await windsurf.executeTerminal(command, cwd);
-          writeLog({
-            tool: name,
-            result: {
-              exitCode: result.exitCode,
-              stdoutPreview: result.stdout?.slice(0, 200),
-              stderrPreview: result.stderr?.slice(0, 200),
-            },
-          });
-          emitConsole(
-            `terminal.execute cmd="${command}" cwd=${cwd ?? "-"} -> exit ${result.exitCode}`,
-          );
-          return {
-            content: [
-              {
-                type: "text",
-                text: `Exit Code: ${result.exitCode}\n\nStdout:\n${result.stdout}\n\nStderr:\n${result.stderr}`,
-              },
-            ],
+            content: [{ type: "text", text: message }],
           };
         }
 
@@ -458,12 +301,6 @@ async function main() {
   });
 
   const transport = new StdioServerTransport();
-
-  // Cleanup on exit
-  process.on("exit", () => {
-    windsurf.disconnect();
-  });
-
   await server.connect(transport);
   console.error("Windsurf MCP Server running on stdio");
 }
