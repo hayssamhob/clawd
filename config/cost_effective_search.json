@@ -1,0 +1,13 @@
+{
+    "search_provider": "deepseek-v3",
+    "api_key_path": "$HOME/clawd/.secrets/deepseek_api_key",
+    "cost_optimization": {
+        "max_results": 5,
+        "result_detail_level": "compact",
+        "cache_duration_hours": 24
+    },
+    "fallback_providers": [
+        "brave-search-free",
+        "google-search-free"
+    ]
+}

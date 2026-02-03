@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OpenClaw Model Switcher Demo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        header {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+            margin-top: 80px;
+        }
+
+        h1 {
+            font-size: 2.5em;
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            color: #666;
+            font-size: 1.1em;
+        }
+
+        .demo-section {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+
+        .section-title {
+            font-size: 1.5em;
+            color: #667eea;
+            margin-bottom: 20px;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .info-card {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 12px;
+            border-left: 4px solid #667eea;
+        }
+
+        .info-card h3 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 1.1em;
+        }
+
+        .info-card p {
+            color: #666;
+            font-size: 0.95em;
+            line-height: 1.6;
+        }
+
+        code {
+            background: #e0e7ff;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.9em;
+            font-family: 'Monaco', 'Courier New', monospace;
+        }
+
+        pre {
+            background: #1a1a1a;
+            color: #f0f0f0;
+            padding: 20px;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin-top: 15px;
+        }
+
+        .current-model-display {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 12px;
+            margin-top: 20px;
+        }
+
+        .current-model-display h3 {
+            color: #667eea;
+            margin-bottom: 15px;
+        }
+
+        .model-detail {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .model-detail:last-child {
+            border-bottom: none;
+        }
+
+        .model-detail-label {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .model-detail-value {
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div id="model-switcher-root"></div>
+
+    <div class="container">
+        <header>
+            <h1>🤖 OpenClaw Model Switcher</h1>
+            <p class="subtitle">Interactive demo of the model selection component</p>
+        </header>
+
+        <div class="demo-section">
+            <div class="section-title">Current Model Information</div>
+            <div class="current-model-display">
+                <h3>Active Model</h3>
+                <div class="model-detail">
+                    <span class="model-detail-label">Model ID:</span>
+                    <span class="model-detail-value" id="current-model-id">-</span>
+                </div>
+                <div class="model-detail">
+                    <span class="model-detail-label">Model Name:</span>
+                    <span class="model-detail-value" id="current-model-name">-</span>
+                </div>
+                <div class="model-detail">
+                    <span class="model-detail-label">Provider:</span>
+                    <span class="model-detail-value" id="current-model-provider">-</span>
+                </div>
+                <div class="model-detail">
+                    <span class="model-detail-label">Tier:</span>
+                    <span class="model-detail-value" id="current-model-tier">-</span>
+                </div>
+                <div class="model-detail">
+                    <span class="model-detail-label">Last Changed:</span>
+                    <span class="model-detail-value" id="last-changed">-</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="demo-section">
+            <div class="section-title">Features</div>
+            <div class="info-grid">
+                <div class="info-card">
+                    <h3>🎯 Smart Positioning</h3>
+                    <p>Component automatically positions in the top-right corner with responsive behavior for mobile devices.</p>
+                </div>
+                <div class="info-card">
+                    <h3>🎨 Visual Feedback</h3>
+                    <p>Loading states, success/error toasts, and smooth animations provide clear user feedback.</p>
+                </div>
+                <div class="info-card">
+                    <h3>⚡ Fast Switching</h3>
+                    <p>Instant model switching with async support and error handling built-in.</p>
+                </div>
+                <div class="info-card">
+                    <h3>🌙 Dark Mode</h3>
+                    <p>Automatically adapts to system dark mode preferences for comfortable viewing.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="demo-section">
+            <div class="section-title">Integration Example</div>
+            <p>Add the ModelSwitcher component to your OpenClaw dashboard:</p>
+            <pre><code>import ModelSwitcher from './ModelSwitcher';
+
+// Fetch models from OpenClaw config
+const models = [
+  { 
+    id: 'anthropic/claude-sonnet-4-5-20250929', 
+    name: 'Claude Sonnet 4.5', 
+    provider: 'anthropic',
+    tier: 'premium'
+  },
+  { 
+    id: 'anthropic/claude-3-5-haiku-20241022', 
+    name: 'Claude 3.5 Haiku', 
+    provider: 'anthropic',
+    tier: 'standard'
+  },
+  // ... more models
+];
+
+// Handle model change
+const handleModelChange = async (modelId) => {
+  // Update OpenClaw config
+  await fetch('/api/config/model', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ model: modelId })
+  });
+};
+
+// Render component
+&lt;ModelSwitcher
+  currentModel="anthropic/claude-sonnet-4-5-20250929"
+  models={models}
+  onModelChange={handleModelChange}
+  position="top-right"
+/&gt;</code></pre>
+        </div>
+    </div>
+
+    <script type="module">
+        // Mock data for demo
+        const mockModels = [
+            { 
+                id: 'anthropic/claude-sonnet-4-5-20250929', 
+                name: 'Claude Sonnet 4.5', 
+                provider: 'anthropic',
+                tier: 'premium'
+            },
+            { 
+                id: 'anthropic/claude-3-5-haiku-20241022', 
+                name: 'Claude 3.5 Haiku', 
+                provider: 'anthropic',
+                tier: 'standard'
+            },
+            { 
+                id: 'anthropic/claude-3-5-sonnet-20241022', 
+                name: 'Claude 3.5 Sonnet', 
+                provider: 'anthropic',
+                tier: 'premium'
+            },
+            { 
+                id: 'openai/gpt-4o-mini', 
+                name: 'GPT-4o Mini', 
+                provider: 'openai',
+                tier: 'standard'
+            },
+            { 
+                id: 'groq/llama-3.3-70b-versatile', 
+                name: 'Llama 3.3 70B', 
+                provider: 'groq',
+                tier: 'free'
+            },
+            { 
+                id: 'google/gemini-2.0-flash', 
+                name: 'Gemini 2.0 Flash', 
+                provider: 'google',
+                tier: 'free'
+            },
+            { 
+                id: 'ollama/llama3.2:latest', 
+                name: 'Llama 3.2 (Local)', 
+                provider: 'ollama',
+                tier: 'free'
+            },
+            { 
+                id: 'xai/grok-beta', 
+                name: 'Grok Beta', 
+                provider: 'xai',
+                tier: 'premium'
+            }
+        ];
+
+        let currentModel = mockModels[0].id;
+
+        // Update display
+        function updateDisplay(modelId) {
+            const model = mockModels.find(m => m.id === modelId);
+            if (model) {
+                document.getElementById('current-model-id').textContent = model.id;
+                document.getElementById('current-model-name').textContent = model.name;
+                document.getElementById('current-model-provider').textContent = model.provider;
+                document.getElementById('current-model-tier').textContent = model.tier;
+                document.getElementById('last-changed').textContent = new Date().toLocaleString();
+            }
+        }
+
+        // Mock model change handler
+        async function handleModelChange(modelId) {
+            console.log('Switching to model:', modelId);
+            
+            // Simulate API call
+            await new Promise(resolve => setTimeout(resolve, 800));
+            
+            // Update current model
+            currentModel = modelId;
+            updateDisplay(modelId);
+            
+            console.log('Model switched successfully');
+        }
+
+        // Initialize display
+        updateDisplay(currentModel);
+
+        // Note: In production, you would render the React component here
+        // For this demo, we're showing the integration pattern
+        console.log('ModelSwitcher Demo Ready');
+        console.log('Current Model:', currentModel);
+        console.log('Available Models:', mockModels.length);
+    </script>
+</body>
+</html>

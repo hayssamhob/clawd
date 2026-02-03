@@ -1,0 +1,27 @@
+{
+  "name": "windsurf-task-broker",
+  "version": "1.0.0",
+  "description": "MCP Task Broker Server for Windsurf Fleet Management",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "ts-node src/index.ts",
+    "test": "jest"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.2.0",
+    "ws": "^8.13.0",
+    "uuid": "^9.0.0",
+    "lodash": "^4.17.21"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.4",
+    "ts-node": "^10.9.1",
+    "@types/node": "^18.15.11",
+    "@types/ws": "^8.5.5",
+    "@types/uuid": "^9.0.2",
+    "jest": "^29.5.0",
+    "ts-jest": "^29.1.0"
+  }
+}

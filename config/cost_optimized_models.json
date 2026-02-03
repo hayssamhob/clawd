@@ -1,0 +1,23 @@
+{
+    "brain_models": {
+        "top_tier": "claude-opus-4-5",
+        "cost_effective": "kimmy-k2.5",
+        "default": "claude-3-5-haiku"
+    },
+    "coding_models": {
+        "high_quality": "codeex-gpt-5.2-extra-high",
+        "budget_friendly": "miniax-2.1",
+        "recommended": "deepseek-v3"
+    },
+    "search_models": {
+        "primary": "deepseek-v3"
+    },
+    "voice_models": {
+        "local": ["kimmy-k2.5", "miniax-2.1"],
+        "api": "chatgpt-4.0-realtime"
+    },
+    "image_understanding": {
+        "top_tier": "claude-opus-4-5",
+        "budget_friendly": "gemini-2.5-flash"
+    }
+}

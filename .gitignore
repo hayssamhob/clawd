@@ -1,32 +1,36 @@
-# Process IDs
-*.pid
-
-# Logs (keep structure, ignore content changes)
+# Logs & runtime
+/logs/
+/mcp_logs/
+/windsurf-cascade-logs/
 *.log
+OPENCLAW_RESULT.md
 
-# Temporary files
-*.tmp
-*.temp
-.DS_Store
+# Build
+/dist/
+/build/
+*.tsbuildinfo
 
-# Node modules (if any)
+# Dependencies
 node_modules/
+venv/
+*.egg-info
+__pycache__/
 
-# Environment variables
+# Environment
 .env
 .env.local
+.env.*.local
+.env.production.local
 
-# Build artifacts
-dist/
-build/
-
-# Editor files
+# IDE
 .vscode/
 .idea/
 *.swp
 *.swo
-*~
 
-# Usage tracking (local only)
-memory/windsurf-usage.json
-memory/heartbeat-state.json
+# OS
+.DS_Store
+
+# Archives
+/archive/
+backup_*.tar.gz
