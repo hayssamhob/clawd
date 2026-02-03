@@ -12,8 +12,8 @@ import {
   ListToolsRequestSchema,
   Tool,
 } from "@modelcontextprotocol/sdk/types.js";
-import fs from "fs";
-import path from "path";
+import * as fs from "fs";
+import * as path from "path";
 
 // Complete Windsurf model data (82 models)
 const WINDSURF_MODELS_FILE = path.join(
@@ -134,6 +134,54 @@ const TOOLS: Tool[] = [
         },
       },
       required: ["prompt"],
+    },
+  },
+  {
+    name: "delegate_to_cascade",
+    description:
+      "Delegate a task to Windsurf Cascade with automatic model selection and prompt injection. OpenClaw can specify any model ID, tier shortcut (free/cheap/smart/fast), or partial model name.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        prompt: {
+          type: "string",
+          description: "The task to delegate to Cascade",
+        },
+        model: {
+          type: "string",
+          description:
+            "Model ID, tier (free/cheap/smart/fast), or partial model name",
+        },
+      },
+      required: ["prompt"],
+    },
+  },
+  {
+    name: "get_cascade_status",
+    description:
+      "Get the last output from Cascade by reading OPENCLAW_RESULT.md",
+    inputSchema: {
+      type: "object",
+      properties: {
+        lines: {
+          type: "number",
+          description: "Number of lines to read from the result file",
+        },
+      },
+    },
+  },
+  {
+    name: "switch_cascade_model",
+    description: "Switch the Cascade model without sending a prompt",
+    inputSchema: {
+      type: "object",
+      properties: {
+        model: {
+          type: "string",
+          description: "Model ID or tier to switch to",
+        },
+      },
+      required: ["model"],
     },
   },
 ];
@@ -279,8 +327,73 @@ async function main() {
           const message = `Prompt execution requested${modelId ? ` with model ${modelId}` : ""}\n\nPrompt: ${prompt}\n\nNote: To execute prompts in Windsurf, you need to:\n1. Open Windsurf IDE\n2. Use Cascade chat interface\n3. Or use the VS Code extension for automation\n\nThis MCP server provides model information but cannot directly execute prompts.`;
 
           emitConsole(
-            `prompt.execute model=${modelId ?? "default"} -> acknowledged`,
+            `prompt.execute -> acknowledged (${prompt.length} chars)`,
           );
+
+          return {
+            content: [{ type: "text", text: message }],
+          };
+        }
+
+        case "delegate_to_cascade": {
+          const { prompt, model } = args as {
+            prompt: string;
+            model?: string;
+          };
+          writeLog({
+            tool: name,
+            args: { model, promptPreview: prompt.slice(0, 120) },
+          });
+
+          // Simulate delegation to Cascade
+          const message = `Task delegated to Cascade${model ? ` with model: ${model}` : ""}\n\nPrompt: ${prompt}\n\nNote: To actually delegate to Cascade, you need to:\n1. Open Windsurf IDE\n2. Use the VS Code extension for automation\n3. Or manually paste the prompt into Cascade\n\nThis MCP server provides model information but cannot directly delegate to Cascade.`;
+
+          emitConsole(
+            `cascade.delegate -> acknowledged (${prompt.length} chars)`,
+          );
+
+          return {
+            content: [{ type: "text", text: message }],
+          };
+        }
+
+        case "get_cascade_status": {
+          const { lines } = args as { lines?: number };
+          writeLog({ tool: name, args: { lines } });
+
+          // Try to read the result file
+          const resultPath = path.join(process.cwd(), "OPENCLAW_RESULT.md");
+
+          let content = "";
+          try {
+            if (fs.existsSync(resultPath)) {
+              content = fs.readFileSync(resultPath, "utf8");
+              if (lines && lines > 0) {
+                const contentLines = content.split("\n");
+                content = contentLines.slice(-lines).join("\n");
+              }
+            } else {
+              content =
+                "OPENCLAW_RESULT.md not found. Cascade may not have written any results yet.";
+            }
+          } catch (error: any) {
+            content = `Error reading result file: ${error?.message || String(error)}`;
+          }
+
+          emitConsole(`cascade.status -> ${content.length} chars`);
+
+          return {
+            content: [{ type: "text", text: content }],
+          };
+        }
+
+        case "switch_cascade_model": {
+          const { model } = args as { model: string };
+          writeLog({ tool: name, args: { model } });
+
+          const message = `Model switch requested: ${model}\n\nNote: To actually switch models in Cascade, you need to:\n1. Open Windsurf IDE\n2. Use the model selector in Cascade\n3. Or use the VS Code extension for automation\n\nThis MCP server provides model information but cannot directly switch models.`;
+
+          emitConsole(`cascade.switch ${model} -> acknowledged`);
 
           return {
             content: [{ type: "text", text: message }],

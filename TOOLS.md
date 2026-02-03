@@ -42,10 +42,24 @@ Things like:
 - **Reasoning:** QwQ (local Ollama, when needed)
 
 ### Model Preferences
-- **Primary (Brain):** anthropic/claude-sonnet-4-5-20250929
-- **Fallbacks:** bedrock/qwen3-coder, bedrock/gpt-oss, bedrock/deepseek-v3
+**Anthropic Models (Full List):**
+- **Primary (Brain):** 
+  - anthropic/claude-3-5-haiku-20241022 (default)
+  - anthropic/claude-3-5-sonnet-20241022
+  - anthropic/claude-sonnet-4-5-20250929
+  - anthropic/claude-3-haiku-20240307
+  - anthropic/claude-3-sonnet-20240229
+
+- **Fallbacks:** 
+  - bedrock/qwen3-coder
+  - bedrock/gpt-oss
+  - bedrock/deepseek-v3
+
 - **Image:** Built into primary model
-- **Coding (Windsurf):** DeepSeek V3 or Claude 3.5 Haiku (default), upgrade to Sonnet only if needed
+- **Coding (Windsurf):** 
+  - DeepSeek V3 
+  - Claude 3.5 Haiku (default)
+  - Upgrade to Sonnet only if needed
 - **Coding CLI:** Use `codex` or `opencode` when available (Windsurf preferred)
 - **Web Search:** Brave API (already configured)
 

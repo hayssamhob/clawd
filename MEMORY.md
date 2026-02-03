@@ -196,6 +196,14 @@ This breakthrough enables the core "Windsurf ONLY for coding" rule to actually w
 
 **Status:** 🟢 Production ready
 
+**Model Switching Added (16:06-16:20):**
+- MCP bridge `switch_cascade_model` doesn't work (settings API not exposed)
+- Solution: Keyboard shortcut Cmd+Shift+ù opens searchable model selector
+- Created `windsurf-switch-model.cjs` for programmatic model switching
+- Updated `windsurf-execute.cjs` with `--model` flag
+- Complete flow: switch model → send task → read response
+- All tested and working (Claude Sonnet 4.5, DeepSeek V3, Claude Haiku 4.5)
+
 ---
 
 *Last updated: February 3, 2026 20:55 WITA*
