@@ -27,6 +27,17 @@ Located at: `/Users/hayssamhoballah/.nvm/versions/node/v22.12.0/lib/node_modules
 
 **This rule was repeated 3 times. It's non-negotiable.**
 
+### Primary Model Strategy (Updated Feb 2, 2026)
+
+**Current Setup:**
+- **Primary Model:** Claude 3.5 Haiku (`anthropic/claude-3-5-haiku-20241022`)
+- **Token Optimizer:** Enabled (intelligently escalates to Sonnet/Opus when needed)
+- **Cost Savings:** ~80% cheaper than Sonnet 4.5 baseline
+- **Fallbacks:** Step 3.5 Flash (free) → Llama 3.2 (local)
+
+**Philosophy:**
+Start cheap (Haiku), escalate smart (token-optimizer decides when to use Sonnet/Opus based on complexity). Best of both worlds - cost efficiency + capability when needed.
+
 ---
 
 ## System Architecture
