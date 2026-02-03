@@ -1,0 +1,125 @@
+# Windsurf Runtime Arguments
+# Controls behavior of the Windsurf task broker integration
+
+## Broker Configuration
+broker:
+  url: ws://localhost:9000
+  auth_token: null  # Set from environment if needed
+  enabled: true
+  fallback_to_direct_claude: true
+
+## Task Execution
+task_execution:
+  default_timeout_seconds: 1800  # 30 minutes
+  max_retries: 3
+  retry_delay_seconds: 5
+  
+## Complexity Routing
+routing:
+  strategy: complexity-based
+  
+  # Token thresholds for complexity levels
+  thresholds:
+    simple_max_tokens: 500
+    medium_max_tokens: 2000
+    # Above 2000 or contains keywords → complex
+  
+  # Keywords that trigger complex routing
+  complexity_keywords:
+    - "refactor"
+    - "optimize"
+    - "rewrite"
+    - "architecture"
+    - "redesign"
+    - "overhaul"
+
+## Model Preferences
+models:
+  routing_preference:
+    simple: haiku      # Use Haiku for simple tasks
+    medium: sonnet     # Use Sonnet for medium
+    complex: auto      # Auto-select best for complex (Opus > DeepSeek > Sonnet)
+  
+  # Model cost (for budget-aware routing)
+  costs:
+    haiku:
+      input_per_mtok: 0.80
+      output_per_mtok: 4.00
+    sonnet:
+      input_per_mtok: 3.00
+      output_per_mtok: 15.00
+    opus:
+      input_per_mtok: 15.00
+      output_per_mtok: 75.00
+    deepseek:
+      input_per_mtok: 0.27
+      output_per_mtok: 1.10
+
+  # Model performance ratings (1-10)
+  quality_scores:
+    haiku: 7
+    sonnet: 8.5
+    opus: 9.5
+    deepseek: 8
+
+## Caching
+cache:
+  enabled: true
+  ttl_seconds: 3600  # 1 hour
+  deduplication: true  # Don't resubmit identical prompts
+
+## Health Checks
+health_checks:
+  enabled: true
+  interval_seconds: 30
+  timeout_seconds: 10
+
+## Rate Limiting
+rate_limiting:
+  enabled: true
+  max_tasks_per_minute: 60
+  max_concurrent_tasks: 10
+  
+## Logging
+logging:
+  level: info  # debug, info, warn, error
+  log_all_submissions: true
+  log_all_completions: true
+  log_failures: true
+
+## Instance Management
+instances:
+  auto_scale: false  # Manual scaling for now
+  min_instances: 1
+  max_instances: 10
+  
+  # Recommended default configuration
+  recommended_pool:
+    haiku: 1      # High-volume simple tasks
+    sonnet: 2     # Main workload
+    opus: 1       # Complex tasks
+    deepseek: 1   # Budget-conscious complex
+
+## Queue Management
+queue:
+  max_depth: 100
+  priority_levels:
+    high: 0.3      # 30% priority weight
+    normal: 0.5    # 50% priority weight
+    low: 0.2       # 20% priority weight
+
+## Fallback Behavior
+fallback:
+  to_direct_claude: true
+  on_broker_down: true
+  on_queue_full: queue_and_retry  # queue_and_retry or reject
+
+## Feature Flags
+features:
+  semantic_caching: false  # When available
+  batch_submissions: false
+  stream_results: false
+  cost_tracking: true
+
+# Last updated: Feb 4, 2026
+# Apply with: source args/windsurf.yaml
