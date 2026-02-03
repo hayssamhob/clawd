@@ -1,212 +1,46 @@
-# Security Guardrails - Dangerous Operations Protection
+dangerous_patterns:
+  prevent_direct_coding:
+    - block_all_non_windsurf_code_generation: true
+    - log_coding_attempt: true
+    - require_windsurf_route: true
 
-# CRITICAL: These patterns require explicit human approval before execution
+  file_operations:
+    - rm -rf
+    - rm -f
+    - shred
+    - unlink
+  network_actions:
+    - curl -s
+    - wget --no-check-certificate
+    - nc -e
+  system_escalation:
+    - sudo
+    - su -
+    - pkexec
+  destructive_commands:
+    - format
+    - dd if=/dev/zero
+    - wipefs
 
-dangerous_operations:
-  # Destructive file operations
-  - pattern: "rm -rf"
-    reason: "Recursively deletes files without recovery"
-    action: "require_confirmation"
-    severity: "critical"
-  
-  - pattern: "rm -f"
-    reason: "Force deletes files without confirmation"
-    action: "require_confirmation"
-    severity: "high"
-  
-  - pattern: "mv .* /dev/null"
-    reason: "Permanently deletes by moving to null device"
-    action: "require_confirmation"
-    severity: "critical"
+security_rules:
+  - always_ask_confirmation: true
+  - use_trash_over_rm: true
+  - log_all_dangerous_attempts: true
+  - block_external_actions_without_approval: true
+  - enforce_windsurf_for_coding: true
 
-  # Git force operations
-  - pattern: "git push.*--force"
-    reason: "Rewrites remote history, can lose commits"
-    action: "require_confirmation"
-    severity: "high"
-  
-  - pattern: "git push.*-f"
-    reason: "Rewrites remote history (shorthand)"
-    action: "require_confirmation"
-    severity: "high"
-  
-  - pattern: "git reset --hard"
-    reason: "Permanently discards uncommitted changes"
-    action: "require_confirmation"
-    severity: "medium"
+coding_policy:
+  mandatory_windsurf_routing: true
+  allowed_coding_tools:
+    - windsurf
+  blocked_coding_tools:
+    - claude_direct_code_generation
+    - codex_cli
+    - opencode
+    - pi_coding_agent
 
-  # Database operations
-  - pattern: "DROP DATABASE"
-    reason: "Permanently deletes entire database"
-    action: "require_confirmation"
-    severity: "critical"
-  
-  - pattern: "DROP TABLE"
-    reason: "Permanently deletes table and all data"
-    action: "require_confirmation"
-    severity: "critical"
-  
-  - pattern: "TRUNCATE"
-    reason: "Deletes all rows from table"
-    action: "require_confirmation"
-    severity: "high"
-  
-  - pattern: "DELETE FROM .* WHERE 1=1"
-    reason: "Deletes all rows (common mistake pattern)"
-    action: "block"
-    severity: "critical"
-
-  # System operations
-  - pattern: "sudo rm"
-    reason: "Elevated deletion privileges"
-    action: "require_confirmation"
-    severity: "critical"
-  
-  - pattern: "chmod 777"
-    reason: "Makes files world-writable (security risk)"
-    action: "warn"
-    severity: "medium"
-  
-  - pattern: "curl.*\\|.*sh"
-    reason: "Pipes remote script directly to shell (security risk)"
-    action: "require_confirmation"
-    severity: "high"
-  
-  - pattern: "wget.*\\|.*sh"
-    reason: "Downloads and executes script (security risk)"
-    action: "require_confirmation"
-    severity: "high"
-
-  # YouTube/Social media (specific to Hayssam's requirements)
-  - pattern: ".*youtube.*delete"
-    reason: "Hayssam requires 3 confirmations for YouTube deletions"
-    action: "require_triple_confirmation"
-    severity: "critical"
-  
-  - pattern: ".*video.*delete"
-    reason: "Potential YouTube content deletion"
-    action: "require_confirmation"
-    severity: "high"
-
-  # Email/messaging operations
-  - pattern: ".*broadcast.*"
-    reason: "Mass messaging requires human approval"
-    action: "require_confirmation"
-    severity: "high"
-  
-  - pattern: ".*send_all.*"
-    reason: "Bulk operations require oversight"
-    action: "require_confirmation"
-    severity: "high"
-
-  # API key exposure
-  - pattern: "echo.*API.*KEY"
-    reason: "Potential credential exposure in logs"
-    action: "warn"
-    severity: "medium"
-  
-  - pattern: "cat.*/\\.env"
-    reason: "Displaying environment variables (may contain secrets)"
-    action: "warn"
-    severity: "medium"
-
-# Safe alternatives
-safe_alternatives:
-  "rm -rf": "trash"  # Recoverable deletion
-  "rm -f": "trash"
-  "git push --force": "git push --force-with-lease"  # Safer force push
-  "chmod 777": "chmod 755"  # More restrictive permissions
-
-# Human-in-the-loop requirements
-human_approval_required:
-  - "Sending emails to external recipients"
-  - "Publishing content to social media"
-  - "Deleting production data"
-  - "Modifying DNS records"
-  - "Changing security settings"
-  - "Deploying to production"
-  - "Spending money (API calls with cost)"
-
-# Allowed automated operations
-automated_ok:
-  - "Reading files"
-  - "Analyzing data"
-  - "Web searches"
-  - "Generating code"
-  - "Running tests"
-  - "Committing to git (own work)"
-  - "Creating documentation"
-  - "Internal workspace operations"
-
-# Rate limits
-rate_limits:
-  email_send:
-    per_hour: 50
-    per_day: 200
-  
-  api_calls:
-    per_minute: 60
-    per_hour: 1000
-  
-  social_posts:
-    per_hour: 5
-    per_day: 20
-
-# Audit logging
-audit_required:
-  - "All destructive operations"
-  - "All external communications"
-  - "All file deletions"
-  - "All database modifications"
-  - "All API calls with cost"
-
-# Confirmation levels
-confirmation_levels:
-  single: "Ask once, proceed if yes"
-  double: "Ask twice with different wording"
-  triple: "Ask three times (YouTube deletions)"
-  manual_review: "Require explicit review of command before execution"
-
-# Environment-specific rules
-environments:
-  production:
-    require_confirmation: true
-    allow_destructive: false
-    audit_all: true
-  
-  staging:
-    require_confirmation: true
-    allow_destructive: true
-    audit_all: true
-  
-  development:
-    require_confirmation: false
-    allow_destructive: true
-    audit_all: false
-
-# Current environment
-current_environment: "development"  # Hayssam's personal workspace
-
----
-# Implementation Notes
-
-# How Augustus should use this file:
-# 1. BEFORE executing any command, check against dangerous_operations
-# 2. If match found, follow the specified action
-# 3. Log all actions to audit database
-# 4. Suggest safe_alternatives when applicable
-# 5. Always prefer trash over rm for recoverability
-
-# Action types:
-# - "block": Never execute, refuse immediately
-# - "require_confirmation": Ask user before proceeding
-# - "require_double_confirmation": Ask twice with different phrasing
-# - "require_triple_confirmation": Ask three times (YouTube only)
-# - "warn": Show warning but allow user to proceed
-# - "log": Execute but log to audit trail
-
-# Security philosophy:
-# - Recoverable > permanent
-# - Explicit > implicit
-# - Safe default > maximum power
-# - Audit > trust
+audit_logging:
+  enabled: true
+  retention_days: 90
+  sensitive_data_mask: true
+  track_coding_routes: true

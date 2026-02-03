@@ -23,6 +23,24 @@
       {
         "command": "windsurf-bridge.stopMcpServer",
         "title": "Windsurf Bridge: Stop MCP Server"
+      },
+      {
+        "command": "windsurf-bridge.showCostEfficientModels",
+        "title": "Windsurf Bridge: Show Cost-Efficient Models",
+        "icon": "$(symbol-color)"
+      },
+      {
+        "command": "windsurf-bridge.showPromoModels",
+        "title": "Windsurf Bridge: Show Promotional Models",
+        "icon": "$(gift)"
+      },
+      {
+        "command": "windsurf-bridge.toggleCostDisplay",
+        "title": "Windsurf Bridge: Toggle Cost Display"
+      },
+      {
+        "command": "windsurf-bridge.showCostBreakdown",
+        "title": "Windsurf Bridge: Show Cost Breakdown"
       }
     ],
     "configuration": {
@@ -42,6 +60,11 @@
           "type": "boolean",
           "default": true,
           "description": "Automatically start MCP server on extension activation"
+        },
+        "windsurf-bridge.showCostBadges": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show cost badge in status bar"
         }
       }
     }
